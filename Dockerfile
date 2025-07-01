@@ -14,7 +14,7 @@ RUN go mod download
 COPY . .
 
 # Build statically linked binary
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o birthdays-app main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o birthdays-app ./cmd/app
 
 
 # Stage 2: Minimal runtime image
