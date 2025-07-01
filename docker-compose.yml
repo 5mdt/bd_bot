@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data/
+    develop:
+      watch:
+        - action: sync
+          path: ./templates
+          target: /app/templates
+        #   ignore:
+        #     - node_modules/
+        - action: rebuild
+          path: main.go

@@ -1,0 +1,38 @@
+# Binaries
+birthdays-app
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Output of build commands
+/build/
+/bin/
+/out/
+
+# Dependency directories
+vendor/
+
+# Go modules cache
+/go.sum
+/go.mod
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.tmp
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker-related
+docker-compose.override.yml
+
+# Other
+.env
+
+/data/
