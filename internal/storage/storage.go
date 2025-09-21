@@ -3,24 +3,27 @@ package storage
 import (
 	"os"
 
-	"gopkg.in/yaml.v3"
 	"5mdt/bd_bot/internal/models"
+	"gopkg.in/yaml.v3"
 )
 
-var yamlFile = "/data/birthdays.yaml"
+const filePerm = 0644
 
-func EnsureFile() error {
-	if _, err := os.Stat(yamlFile); os.IsNotExist(err) {
-		return os.WriteFile(yamlFile, []byte("[]\n"), 0644)
+func getPath() string {
+	if path := os.Getenv("YAML_PATH"); path != "" {
+		return path
 	}
-	return nil
+	return "/data/birthdays.yaml"
 }
 
 func LoadBirthdays() ([]models.Birthday, error) {
-	if err := EnsureFile(); err != nil {
-		return nil, err
+	filePath := getPath()
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		if err := os.WriteFile(filePath, []byte("[]\n"), filePerm); err != nil {
+			return nil, err
+		}
 	}
-	data, err := os.ReadFile(yamlFile)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -29,9 +32,10 @@ func LoadBirthdays() ([]models.Birthday, error) {
 }
 
 func SaveBirthdays(bs []models.Birthday) error {
+	filePath := getPath()
 	data, err := yaml.Marshal(bs)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(yamlFile, data, 0644)
+	return os.WriteFile(filePath, data, filePerm)
 }

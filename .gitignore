@@ -14,9 +14,9 @@ birthdays-app
 # Dependency directories
 vendor/
 
-# Go modules cache
-/go.sum
-/go.mod
+# Go modules cache (keep go.mod and go.sum in git)
+# /go.sum  - should be committed
+# /go.mod  - should be committed
 
 # IDE/editor files
 .vscode/

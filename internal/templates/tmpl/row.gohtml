@@ -1,0 +1,34 @@
+{{define "row"}}
+<tr>
+  <form hx-post="/save-row" hx-target="#table" hx-swap="outerHTML" style="display:inline">
+    <input type="hidden" name="idx" value="{{.Idx}}">
+    <td><input name="name" value="{{.B.Name}}"></td>
+    <td>
+      <input type="date"
+             class="date-picker"
+             value="{{.B.BirthDate}}"
+             onchange="updateBirthDate(this)">
+      <input type="hidden" name="birth_date" value="{{.B.BirthDate}}" class="birth-date-hidden">
+    </td>
+    <td>
+      <div class="datetime-container">
+        <input type="datetime-local"
+               class="datetime-picker"
+               data-utc="{{formatTime .B.LastNotification}}"
+               step="60"
+               onchange="updateTimestamp(this)">
+        <button type="button" onclick="setCurrentTime(this)" class="set-now-btn">Now</button>
+        <input type="hidden" name="last_notification" value="{{formatTime .B.LastNotification}}">
+      </div>
+    </td>
+    <td><input name="chat_id" value="{{.B.ChatID}}"></td>
+    <td>
+      <button type="submit">Save</button>
+  </form>
+  <form hx-post="/delete-row" hx-target="#table" hx-swap="outerHTML" style="display:inline">
+      <input type="hidden" name="idx" value="{{.Idx}}">
+      <button type="submit">Delete</button>
+  </form>
+  </td>
+</tr>
+{{end}}

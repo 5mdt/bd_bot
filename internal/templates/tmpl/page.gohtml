@@ -1,0 +1,498 @@
+{{define "page"}}
+<html><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Birthday Manager</title>
+<script src="https://unpkg.com/htmx.org@1.9.3"></script>
+<style>
+/* GitHub-style CSS Variables */
+:root {
+    --color-canvas-default: #ffffff;
+    --color-canvas-subtle: #f6f8fa;
+    --color-canvas-inset: #f6f8fa;
+    --color-border-default: #d1d9e0;
+    --color-border-muted: #d8dee4;
+    --color-fg-default: #1f2328;
+    --color-fg-muted: #656d76;
+    --color-fg-subtle: #6e7781;
+    --color-accent-fg: #0969da;
+    --color-accent-emphasis: #0969da;
+    --color-success-fg: #1a7f37;
+    --color-success-emphasis: #1f883d;
+    --color-danger-fg: #d1242f;
+    --color-danger-emphasis: #da3633;
+    --color-neutral-emphasis: #6e7781;
+    --border-radius: 6px;
+    --shadow-small: 0 1px 3px rgba(16, 22, 26, 0.1);
+    --shadow-medium: 0 3px 6px rgba(16, 22, 26, 0.15);
+}
+
+/* Base styles */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-fg-default);
+    background-color: var(--color-canvas-default);
+    margin: 0;
+    padding: 24px;
+    min-height: 100vh;
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+/* Header */
+h1 {
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--color-fg-default);
+    margin: 0 0 24px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border-muted);
+}
+
+/* Table container */
+.table-container {
+    background: var(--color-canvas-default);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-small);
+    overflow: hidden;
+}
+
+/* Table styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin: 0;
+    background: var(--color-canvas-default);
+}
+
+th {
+    background-color: var(--color-canvas-subtle);
+    color: var(--color-fg-default);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border-default);
+    vertical-align: middle;
+}
+
+td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-border-muted);
+    vertical-align: middle;
+    background: var(--color-canvas-default);
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr:hover td {
+    background-color: var(--color-canvas-subtle);
+}
+
+/* Form inputs */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"] {
+    background-color: var(--color-canvas-inset);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--border-radius);
+    color: var(--color-fg-default);
+    font-size: 14px;
+    line-height: 20px;
+    padding: 6px 12px;
+    width: 100%;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="datetime-local"]:focus {
+    background-color: var(--color-canvas-default);
+    border-color: var(--color-accent-emphasis);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.3);
+}
+
+/* DateTime container */
+.datetime-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 280px;
+}
+
+.datetime-picker {
+    min-width: 200px;
+    flex: 1;
+}
+
+.date-picker {
+    min-width: 150px;
+}
+
+/* Buttons */
+button {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    padding: 6px 16px;
+    border-radius: var(--border-radius);
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+/* Primary button (Save, Add) */
+button[type="submit"]:not(.btn-danger) {
+    background-color: var(--color-success-emphasis);
+    border-color: var(--color-success-emphasis);
+    color: #ffffff;
+    margin-right: 8px;
+}
+
+button[type="submit"]:not(.btn-danger):hover {
+    background-color: #1a7f37;
+    border-color: #1a7f37;
+    box-shadow: var(--shadow-small);
+}
+
+/* Delete button */
+form[style*="display:inline"] button[type="submit"]:last-of-type,
+.btn-danger {
+    background-color: var(--color-danger-emphasis);
+    border-color: var(--color-danger-emphasis);
+    color: #ffffff;
+}
+
+form[style*="display:inline"] button[type="submit"]:last-of-type:hover,
+.btn-danger:hover {
+    background-color: #d1242f;
+    border-color: #d1242f;
+    box-shadow: var(--shadow-small);
+}
+
+/* Now button */
+.set-now-btn {
+    background-color: var(--color-neutral-emphasis);
+    border-color: var(--color-neutral-emphasis);
+    color: #ffffff;
+    padding: 6px 12px;
+    font-size: 12px;
+    min-width: auto;
+    flex-shrink: 0;
+}
+
+.set-now-btn:hover {
+    background-color: #57606a;
+    border-color: #57606a;
+    box-shadow: var(--shadow-small);
+}
+
+/* Action cell */
+td:last-child {
+    white-space: nowrap;
+    width: 1%;
+}
+
+/* Form layout within table cells */
+form[style*="display:inline"] {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    body {
+        padding: 16px 8px;
+    }
+
+    .container {
+        padding: 0 8px;
+    }
+
+    h1 {
+        font-size: 24px;
+        margin-bottom: 16px;
+    }
+
+    th, td {
+        padding: 8px 12px;
+    }
+
+    .datetime-container {
+        min-width: auto;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    button {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+}
+
+/* Helper text */
+.help-text {
+    color: var(--color-fg-muted);
+    font-size: 12px;
+    margin-top: 4px;
+    display: block;
+}
+</style>
+<script>
+// Add user timezone to all form submissions
+document.addEventListener('DOMContentLoaded', function() {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    // Add timezone to existing forms
+    document.querySelectorAll('form').forEach(form => {
+        addTimezoneInput(form);
+    });
+
+    // Add timezone to dynamically created forms and update datetime pickers
+    document.body.addEventListener('htmx:afterSettle', function(evt) {
+        evt.detail.target.querySelectorAll('form').forEach(form => {
+            addTimezoneInput(form);
+        });
+        updateDatetimePickers();
+        updateDatePickers();
+    });
+
+    // Check if datetime-local is properly supported
+    checkDateTimeLocalSupport();
+
+    // Initial update of datetime pickers and date pickers
+    updateDatetimePickers();
+    updateDatePickers();
+
+    function addTimezoneInput(form) {
+        if (!form.querySelector('input[name="user_timezone"]')) {
+            const tzInput = document.createElement('input');
+            tzInput.type = 'hidden';
+            tzInput.name = 'user_timezone';
+            tzInput.value = timezone;
+            form.appendChild(tzInput);
+        }
+    }
+});
+
+// Format timestamps for display
+function formatLocalTime(utcTimestamp, timezone) {
+    if (!utcTimestamp || utcTimestamp === '0001-01-01T00:00:00Z') return '';
+    try {
+        const date = new Date(utcTimestamp);
+        return date.toLocaleString('en-US', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (e) {
+        return utcTimestamp;
+    }
+}
+
+// Convert UTC timestamps to local datetime-local format
+function utcToLocalDatetime(utcTimestamp) {
+    if (!utcTimestamp || utcTimestamp === '0001-01-01T00:00:00Z') return '';
+    try {
+        const date = new Date(utcTimestamp);
+        // Format for datetime-local input (browser automatically handles timezone conversion)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (e) {
+        return '';
+    }
+}
+
+// Convert local datetime-local value to UTC ISO string
+function localDatetimeToUtc(localDatetime) {
+    if (!localDatetime) return '';
+    try {
+        const date = new Date(localDatetime);
+        return date.toISOString();
+    } catch (e) {
+        return '';
+    }
+}
+
+// Update datetime pickers with local times
+function updateDatetimePickers() {
+    document.querySelectorAll('.datetime-picker').forEach(picker => {
+        const utcTime = picker.getAttribute('data-utc');
+        if (utcTime && utcTime !== '') {
+            const localDatetime = utcToLocalDatetime(utcTime);
+            if (localDatetime) {
+                picker.value = localDatetime;
+            }
+        }
+        // For empty pickers, leave them empty but ensure they're properly formatted
+        // The step="60" attribute should help browsers show time selector
+    });
+}
+
+// Handle datetime picker changes
+function updateTimestamp(picker) {
+    const container = picker.parentElement;
+    const hiddenInput = container.querySelector('input[name="last_notification"]');
+    const utcTime = localDatetimeToUtc(picker.value);
+
+    hiddenInput.value = utcTime;
+    picker.setAttribute('data-utc', utcTime);
+}
+
+// Set current timestamp
+function setCurrentTime(button) {
+    const now = new Date();
+    const utcISO = now.toISOString();
+    const localDatetime = utcToLocalDatetime(utcISO);
+
+    const container = button.parentElement;
+    const picker = container.querySelector('.datetime-picker');
+    const hiddenInput = container.querySelector('input[name="last_notification"]');
+
+    picker.value = localDatetime;
+    picker.setAttribute('data-utc', utcISO);
+    hiddenInput.value = utcISO;
+}
+
+// Convert birth date from normalized format to date input format
+function normalizeBirthDateForDisplay(birthDate) {
+    if (!birthDate) return '';
+
+    // Handle "0000-MM-DD" format (year unknown) - convert to current year for display
+    if (birthDate.startsWith('0000-')) {
+        const currentYear = new Date().getFullYear();
+        return currentYear + birthDate.substring(4);
+    }
+
+    // Handle "YYYY-MM-DD" format - use as is
+    if (birthDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return birthDate;
+    }
+
+    // Handle "MM-DD" format - add current year
+    if (birthDate.match(/^\d{2}-\d{2}$/)) {
+        const currentYear = new Date().getFullYear();
+        return currentYear + '-' + birthDate;
+    }
+
+    return '';
+}
+
+// Convert date input back to normalized birth date format
+function normalizeBirthDateForStorage(dateValue) {
+    if (!dateValue) return '';
+
+    try {
+        const date = new Date(dateValue + 'T00:00:00');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const year = date.getFullYear();
+
+        // For current year, store as "0000-MM-DD" (year unknown)
+        const currentYear = new Date().getFullYear();
+        if (year === currentYear) {
+            return `0000-${month}-${day}`;
+        }
+
+        // For other years, store full date
+        return `${year}-${month}-${day}`;
+    } catch (e) {
+        return '';
+    }
+}
+
+// Update date pickers with normalized birth dates
+function updateDatePickers() {
+    document.querySelectorAll('.date-picker').forEach(picker => {
+        const birthDate = picker.value;
+        const displayDate = normalizeBirthDateForDisplay(birthDate);
+        picker.value = displayDate;
+    });
+}
+
+// Handle birth date picker changes
+function updateBirthDate(picker) {
+    const selectedDate = picker.value;
+    const normalizedDate = normalizeBirthDateForStorage(selectedDate);
+
+    // Find the corresponding hidden input in the same cell
+    const cell = picker.parentElement;
+    const hiddenInput = cell.querySelector('.birth-date-hidden');
+
+    if (hiddenInput) {
+        // Update the hidden input with normalized value for form submission
+        hiddenInput.value = normalizedDate;
+    }
+
+    // Keep the user-friendly display value in the visible picker
+    // picker.value remains unchanged - shows what user selected
+}
+
+// Check datetime-local support and provide feedback
+function checkDateTimeLocalSupport() {
+    const testInput = document.createElement('input');
+    testInput.type = 'datetime-local';
+    testInput.value = '2024-12-25T15:30';
+
+    const isSupported = testInput.type === 'datetime-local';
+    const canSetValue = testInput.value === '2024-12-25T15:30';
+
+    if (!isSupported || !canSetValue) {
+        console.warn('DateTime-local input may not be fully supported in this browser');
+
+        // Add a notice to datetime containers
+        document.querySelectorAll('.datetime-container').forEach(container => {
+            const notice = document.createElement('small');
+            notice.style.color = '#666';
+            notice.style.fontSize = '12px';
+            notice.style.display = 'block';
+            notice.style.marginTop = '4px';
+            notice.textContent = 'Use "Now" button or format: YYYY-MM-DDTHH:MM';
+            container.appendChild(notice);
+        });
+    }
+}
+</script>
+</head><body>
+<div class="container">
+    <h1>🎂 Birthday Manager</h1>
+    <div class="table-container">
+        {{template "table" .}}
+    </div>
+</div>
+</body></html>
+{{end}}

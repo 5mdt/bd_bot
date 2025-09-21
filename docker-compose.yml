@@ -7,10 +7,13 @@ services:
       - ./data:/data/
     develop:
       watch:
-        - action: sync
-          path: ./templates
-          target: /app/templates
-        #   ignore:
-        #     - node_modules/
         - action: rebuild
-          path: main.go
+          path: cmd/app/
+        - action: rebuild
+          path: internal/
+        - action: rebuild
+          path: go.mod
+        - action: rebuild
+          path: go.sum
+        - action: rebuild
+          path: Dockerfile

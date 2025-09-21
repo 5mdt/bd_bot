@@ -1,0 +1,35 @@
+{{define "table"}}
+<div id="table">
+<table border="1" cellpadding="5">
+<tr><th>Name</th><th>Birth Date</th><th>Last Notification</th><th>Chat ID</th><th>Action</th></tr>
+{{range $i, $b := .}}
+  {{template "row" dict "Idx" $i "B" $b}}
+{{end}}
+<tr>
+  <form hx-post="/save-row" hx-target="#table" hx-swap="outerHTML">
+    <input type="hidden" name="idx" value="-1">
+    <td><input name="name"></td>
+    <td>
+      <input type="date"
+             class="date-picker"
+             onchange="updateBirthDate(this)">
+      <input type="hidden" name="birth_date" value="" class="birth-date-hidden">
+    </td>
+    <td>
+      <div class="datetime-container">
+        <input type="datetime-local"
+               class="datetime-picker"
+               data-utc=""
+               step="60"
+               onchange="updateTimestamp(this)">
+        <button type="button" onclick="setCurrentTime(this)" class="set-now-btn">Now</button>
+        <input type="hidden" name="last_notification" value="">
+      </div>
+    </td>
+    <td><input name="chat_id"></td>
+    <td><button type="submit">Add</button></td>
+  </form>
+</tr>
+</table>
+</div>
+{{end}}
