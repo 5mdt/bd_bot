@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -11,6 +12,45 @@ import (
 	"5mdt/bd_bot/internal/models"
 	"5mdt/bd_bot/internal/storage"
 )
+
+type PageData struct {
+	Birthdays []models.Birthday
+	BotInfo   BotInfo
+}
+
+type BotInfo struct {
+	Status            string
+	Username          string
+	FirstName         string
+	Uptime            string
+	NotificationsSent int64
+	Configured        bool
+}
+
+type BotStatusProvider interface {
+	GetStatus() string
+	GetUsername() string
+	GetFirstName() string
+	GetUptime() time.Duration
+	GetNotificationsSent() int64
+}
+
+func formatUptime(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%.0fs", d.Seconds())
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%.0fm", d.Minutes())
+	}
+	if d < 24*time.Hour {
+		hours := int(d.Hours())
+		minutes := int(d.Minutes()) % 60
+		return fmt.Sprintf("%dh %dm", hours, minutes)
+	}
+	days := int(d.Hours()) / 24
+	hours := int(d.Hours()) % 24
+	return fmt.Sprintf("%dd %dh", days, hours)
+}
 
 func parseIdx(r *http.Request) (int, error) {
 	if err := r.ParseForm(); err != nil {
@@ -73,13 +113,36 @@ func loadBirthdaysOrError(w http.ResponseWriter) ([]models.Birthday, bool) {
 	return bs, true
 }
 
-func IndexHandler(tpl *template.Template) http.HandlerFunc {
+func IndexHandler(tpl *template.Template, botProvider BotStatusProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bs, ok := loadBirthdaysOrError(w)
 		if !ok {
 			return
 		}
-		if err := tpl.ExecuteTemplate(w, "page", bs); err != nil {
+
+		var botInfo BotInfo
+		if botProvider != nil {
+			botInfo = BotInfo{
+				Status:            botProvider.GetStatus(),
+				Username:          botProvider.GetUsername(),
+				FirstName:         botProvider.GetFirstName(),
+				Uptime:            formatUptime(botProvider.GetUptime()),
+				NotificationsSent: botProvider.GetNotificationsSent(),
+				Configured:        true,
+			}
+		} else {
+			botInfo = BotInfo{
+				Status:     "not configured",
+				Configured: false,
+			}
+		}
+
+		data := PageData{
+			Birthdays: bs,
+			BotInfo:   botInfo,
+		}
+
+		if err := tpl.ExecuteTemplate(w, "page", data); err != nil {
 			log.Println("Template execute error:", err)
 			http.Error(w, "Render error", 500)
 		}

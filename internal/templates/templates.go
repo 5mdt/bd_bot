@@ -17,9 +17,10 @@ var (
 func LoadTemplates() *template.Template {
 	once.Do(func() {
 		tpl = template.New("").Funcs(template.FuncMap{
-			"dict":       dict,
-			"formatTime": formatTime,
-			"isZeroTime": isZeroTime,
+			"dict":            dict,
+			"formatTime":      formatTime,
+			"isZeroTime":      isZeroTime,
+			"formatBirthDate": formatBirthDate,
 		})
 		tpl = template.Must(tpl.ParseFS(tmplFS, "tmpl/*.gohtml"))
 	})

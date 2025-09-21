@@ -4,11 +4,15 @@
     <input type="hidden" name="idx" value="{{.Idx}}">
     <td><input name="name" value="{{.B.Name}}"></td>
     <td>
-      <input type="date"
-             class="date-picker"
-             value="{{.B.BirthDate}}"
-             onchange="updateBirthDate(this)">
-      <input type="hidden" name="birth_date" value="{{.B.BirthDate}}" class="birth-date-hidden">
+      <div class="birth-date-container">
+        <span class="birth-date-display">{{formatBirthDate .B.BirthDate}}</span>
+        <input type="date"
+               class="date-picker"
+               value="{{.B.BirthDate}}"
+               onchange="updateBirthDate(this)"
+               style="margin-top: 4px;">
+        <input type="hidden" name="birth_date" value="{{.B.BirthDate}}" class="birth-date-hidden">
+      </div>
     </td>
     <td>
       <div class="datetime-container">

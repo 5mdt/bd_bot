@@ -41,7 +41,7 @@ func TestMainHandlers(t *testing.T) {
 
 	tpl := templates.LoadTemplates()
 
-	w := doRequest(t, "GET", "/", nil, handlers.IndexHandler(tpl))
+	w := doRequest(t, "GET", "/", nil, handlers.IndexHandler(tpl, nil))
 	if w.Code != http.StatusOK {
 		t.Errorf("GET / returned %d", w.Code)
 	}

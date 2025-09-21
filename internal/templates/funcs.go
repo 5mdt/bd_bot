@@ -2,6 +2,7 @@ package templates
 
 import (
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -31,4 +32,15 @@ func formatTime(t time.Time) string {
 // isZeroTime checks if a time.Time is zero
 func isZeroTime(t time.Time) bool {
 	return t.IsZero()
+}
+
+// formatBirthDate formats birth date for display
+// If year is 0000 (unknown), show only MM-DD
+// Otherwise show the full YYYY-MM-DD
+func formatBirthDate(birthDate string) string {
+	if strings.HasPrefix(birthDate, "0000-") {
+		// Return MM-DD for unknown year
+		return strings.TrimPrefix(birthDate, "0000-")
+	}
+	return birthDate
 }

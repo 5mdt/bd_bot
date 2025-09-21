@@ -21,7 +21,7 @@ func TestIntegration_IndexHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/", nil)
 
-	IndexHandler(tpl)(w, req)
+	IndexHandler(tpl, nil)(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("want 200, got %d", w.Code)

@@ -16,8 +16,11 @@ RUN go test ./... -v
 
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o birthdays-app ./cmd/app
 
-# Stage 2: Minimal runtime image based on busybox
-FROM busybox:glibc
+# Stage 2: Minimal runtime image with CA certificates
+FROM alpine:latest
+
+# Install CA certificates for HTTPS connections
+RUN apk --no-cache add ca-certificates
 
 WORKDIR /app
 
