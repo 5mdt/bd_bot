@@ -1,0 +1,258 @@
+{{define "scripts"}}
+<script>
+// Add user timezone to all form submissions
+document.addEventListener('DOMContentLoaded', function() {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    // Add timezone to all existing forms
+    document.querySelectorAll('form').forEach(form => {
+        addTimezoneInput(form);
+    });
+
+    // Add timezone to forms added via HTMX
+    document.body.addEventListener('htmx:afterSettle', function(evt) {
+        evt.detail.target.querySelectorAll('form').forEach(form => {
+            addTimezoneInput(form);
+        });
+        updateDatetimePickers();
+        // Date pickers now work directly without normalization
+
+        // Initialize change detection for any new forms
+        evt.detail.target.querySelectorAll('.card-form').forEach(form => {
+            checkFormChanges(form);
+        });
+    });
+
+    // Check if datetime-local is properly supported
+    checkDateTimeLocalSupport();
+
+    // Initial update of datetime pickers
+    updateDatetimePickers();
+
+    // Bot status auto-refresh is now handled by HTMX
+
+    function addTimezoneInput(form) {
+        if (!form.querySelector('input[name="user_timezone"]')) {
+            const tzInput = document.createElement('input');
+            tzInput.type = 'hidden';
+            tzInput.name = 'user_timezone';
+            tzInput.value = timezone;
+            form.appendChild(tzInput);
+        }
+    }
+
+    // Check all forms on initial load with a small delay to ensure DOM is ready
+    setTimeout(() => {
+        document.querySelectorAll('.card-form').forEach(form => {
+            checkFormChanges(form);
+        });
+    }, 100);
+});
+
+// Format timestamps for display
+function formatLocalTime(utcTimestamp, timezone) {
+    if (!utcTimestamp || utcTimestamp === '0001-01-01T00:00:00Z') return '';
+    try {
+        const date = new Date(utcTimestamp);
+        return date.toLocaleString('en-US', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (e) {
+        return utcTimestamp;
+    }
+}
+
+// Convert UTC timestamps to local datetime-local format
+function utcToLocalDatetime(utcTimestamp) {
+    if (!utcTimestamp || utcTimestamp === '0001-01-01T00:00:00Z') return '';
+    try {
+        const date = new Date(utcTimestamp);
+        // Format for datetime-local input (browser automatically handles timezone conversion)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (e) {
+        return '';
+    }
+}
+
+// Convert local datetime-local value to UTC ISO string
+function localDatetimeToUtc(localDatetime) {
+    if (!localDatetime) return '';
+    try {
+        const date = new Date(localDatetime);
+        return date.toISOString();
+    } catch (e) {
+        return '';
+    }
+}
+
+// Update datetime pickers with local times
+function updateDatetimePickers() {
+    document.querySelectorAll('.datetime-picker').forEach(picker => {
+        const utcTime = picker.getAttribute('data-utc');
+        if (utcTime && utcTime !== '') {
+            const localDatetime = utcToLocalDatetime(utcTime);
+            if (localDatetime) {
+                picker.value = localDatetime;
+            }
+        }
+        // For empty pickers, leave them empty but ensure they're properly formatted
+    });
+}
+
+// Handle datetime picker changes - convert to UTC for storage
+function updateTimestamp(picker) {
+    const localDatetime = picker.value;
+    const utcTimestamp = localDatetimeToUtc(localDatetime);
+
+    // Find the corresponding hidden input
+    const hiddenInput = picker.parentElement.querySelector('input[name="last_notification"]');
+    if (hiddenInput) {
+        hiddenInput.value = utcTimestamp;
+    }
+
+    // Update the data-utc attribute for future reference
+    picker.setAttribute('data-utc', utcTimestamp);
+}
+
+// Set current time in datetime picker
+function setCurrentTime(button) {
+    const container = button.parentElement;
+    const picker = container.querySelector('.datetime-picker');
+    const hiddenInput = container.querySelector('input[name="last_notification"]');
+
+    const now = new Date();
+    const utcTimestamp = now.toISOString();
+    const localDatetime = utcToLocalDatetime(utcTimestamp);
+
+    if (picker && localDatetime) {
+        picker.value = localDatetime;
+        picker.setAttribute('data-utc', utcTimestamp);
+    }
+
+    if (hiddenInput) {
+        hiddenInput.value = utcTimestamp;
+    }
+
+    // Trigger change detection
+    if (picker && picker.form) {
+        checkFormChanges(picker.form);
+    }
+}
+
+// Birth date handling is now simplified - direct form submission
+
+// Check for form changes and update save button state
+function checkFormChanges(form) {
+    const saveButton = form.querySelector('.btn-save');
+    if (!saveButton) return;
+
+    const originalName = form.querySelector('.original-name')?.value || '';
+    const originalBirthDate = form.querySelector('.original-birth-date')?.value || '';
+    const originalLastNotification = form.querySelector('.original-last-notification')?.value || '';
+    const originalChatId = form.querySelector('.original-chat-id')?.value || '';
+
+    const nameInput = form.querySelector('input[name="name"]');
+    const birthDateInput = form.querySelector('input[name="birth_date"]');
+    const lastNotificationInput = form.querySelector('.datetime-picker');
+    const chatIdInput = form.querySelector('input[name="chat_id"]');
+
+    const currentName = nameInput?.value || '';
+    const currentBirthDate = birthDateInput?.value || '';
+    const currentLastNotification = form.querySelector('input[name="last_notification"]')?.value || '';
+    const currentChatId = chatIdInput?.value || '';
+
+    // Check individual field changes and add/remove modified styling
+    if (nameInput) {
+        if (originalName !== currentName) {
+            nameInput.classList.add('field-modified');
+        } else {
+            nameInput.classList.remove('field-modified');
+        }
+    }
+
+    if (birthDateInput) {
+        // Special handling for 0000 year dates
+        let datesEqual = originalBirthDate === currentBirthDate;
+        if (!datesEqual && originalBirthDate.startsWith('0000-')) {
+            // If original was 0000-XX-XX and current is currentYear-XX-XX, they should be considered equal
+            const currentYear = new Date().getFullYear();
+            const expectedCurrentDate = originalBirthDate.replace('0000', currentYear.toString());
+            datesEqual = expectedCurrentDate === currentBirthDate;
+        }
+
+        if (!datesEqual) {
+            birthDateInput.classList.add('field-modified');
+        } else {
+            birthDateInput.classList.remove('field-modified');
+        }
+    }
+
+    if (lastNotificationInput) {
+        if (originalLastNotification !== currentLastNotification) {
+            lastNotificationInput.classList.add('field-modified');
+        } else {
+            lastNotificationInput.classList.remove('field-modified');
+        }
+    }
+
+    if (chatIdInput) {
+        if (originalChatId !== currentChatId) {
+            chatIdInput.classList.add('field-modified');
+        } else {
+            chatIdInput.classList.remove('field-modified');
+        }
+    }
+
+    // Special handling for 0000 year dates in change detection
+    let birthDateChanged = originalBirthDate !== currentBirthDate;
+    if (birthDateChanged && originalBirthDate.startsWith('0000-')) {
+        // If original was 0000-XX-XX and current is currentYear-XX-XX, they should be considered equal
+        const currentYear = new Date().getFullYear();
+        const expectedCurrentDate = originalBirthDate.replace('0000', currentYear.toString());
+        birthDateChanged = expectedCurrentDate !== currentBirthDate;
+    }
+
+    const hasChanges = (
+        originalName !== currentName ||
+        birthDateChanged ||
+        originalLastNotification !== currentLastNotification ||
+        originalChatId !== currentChatId
+    );
+
+    if (hasChanges) {
+        saveButton.className = saveButton.className.replace('btn-unchanged', 'btn-changed');
+        saveButton.textContent = 'Save Changes';
+    } else {
+        saveButton.className = saveButton.className.replace('btn-changed', 'btn-unchanged');
+        saveButton.textContent = 'No Changes';
+    }
+}
+
+// Check datetime-local support and provide feedback
+function checkDateTimeLocalSupport() {
+    const testInput = document.createElement('input');
+    testInput.type = 'datetime-local';
+    testInput.value = '2024-12-25T15:30';
+
+    if (testInput.type === 'text' || testInput.value !== '2024-12-25T15:30') {
+        console.warn('datetime-local input not fully supported');
+        // Optionally show a message to the user
+        const pickers = document.querySelectorAll('.datetime-picker');
+        pickers.forEach(picker => {
+            picker.style.border = '2px solid orange';
+            picker.title = 'Your browser may not fully support date-time pickers';
+        });
+    }
+}
+</script>
+{{end}}

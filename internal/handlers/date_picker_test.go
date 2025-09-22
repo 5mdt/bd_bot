@@ -71,14 +71,14 @@ func TestDatePickerNewRowFunctionality(t *testing.T) {
 		t.Error("Response should contain birth_date name attribute")
 	}
 
-	// Should contain date-picker class
-	if !strings.Contains(response, `class="date-picker"`) {
-		t.Error("Response should contain date-picker class")
+	// Should contain date input
+	if !strings.Contains(response, `type="date"`) {
+		t.Error("Response should contain date input type")
 	}
 
-	// Should contain birth-date-hidden class
-	if !strings.Contains(response, `class="birth-date-hidden"`) {
-		t.Error("Response should contain birth-date-hidden class")
+	// Should contain birth_date name attribute
+	if !strings.Contains(response, `name="birth_date"`) {
+		t.Error("Response should contain birth_date name attribute")
 	}
 }
 

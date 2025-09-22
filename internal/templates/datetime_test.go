@@ -26,7 +26,7 @@ func TestDatetimePickerRendering(t *testing.T) {
 		"B":   birthday,
 	}
 
-	err := tpl.ExecuteTemplate(&buf, "row", data)
+	err := tpl.ExecuteTemplate(&buf, "card", data)
 	if err != nil {
 		t.Fatalf("Template execution failed: %v", err)
 	}
@@ -39,7 +39,7 @@ func TestDatetimePickerRendering(t *testing.T) {
 	}
 
 	// Check that datetime picker has the correct class
-	if !strings.Contains(output, `class="datetime-picker"`) {
+	if !strings.Contains(output, `datetime-picker`) {
 		t.Error("Expected datetime-picker class to be present")
 	}
 
@@ -76,7 +76,7 @@ func TestEmptyDatetimePickerRendering(t *testing.T) {
 		"B":   birthday,
 	}
 
-	err := tpl.ExecuteTemplate(&buf, "row", data)
+	err := tpl.ExecuteTemplate(&buf, "card", data)
 	if err != nil {
 		t.Fatalf("Template execution failed: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestBirthDatePickerRendering(t *testing.T) {
 		"B":   birthday,
 	}
 
-	err := tpl.ExecuteTemplate(&buf, "row", data)
+	err := tpl.ExecuteTemplate(&buf, "card", data)
 	if err != nil {
 		t.Fatalf("Template execution failed: %v", err)
 	}
@@ -122,9 +122,9 @@ func TestBirthDatePickerRendering(t *testing.T) {
 		t.Error("Expected date input to be present")
 	}
 
-	// Check that date picker has the correct class
-	if !strings.Contains(output, `class="date-picker"`) {
-		t.Error("Expected date-picker class to be present")
+	// Check that date input is present
+	if !strings.Contains(output, `type="date"`) {
+		t.Error("Expected date input to be present")
 	}
 
 	// Check that birth date value is present
@@ -132,8 +132,8 @@ func TestBirthDatePickerRendering(t *testing.T) {
 		t.Error("Expected birth date value to be present")
 	}
 
-	// Check that onchange handler is present
-	if !strings.Contains(output, `onchange="updateBirthDate(this)"`) {
-		t.Error("Expected updateBirthDate onchange handler to be present")
+	// Check that birth date input name is present
+	if !strings.Contains(output, `name="birth_date"`) {
+		t.Error("Expected birth_date name attribute to be present")
 	}
 }

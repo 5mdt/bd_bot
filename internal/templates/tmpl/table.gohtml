@@ -1,35 +1,59 @@
 {{define "table"}}
-<div id="table">
-<table border="1" cellpadding="5">
-<tr><th>Name</th><th>Birth Date</th><th>Last Notification</th><th>Chat ID</th><th>Action</th></tr>
-{{range $i, $b := .}}
-  {{template "row" dict "Idx" $i "B" $b}}
-{{end}}
-<tr>
-  <form hx-post="/save-row" hx-target="#table" hx-swap="outerHTML">
-    <input type="hidden" name="idx" value="-1">
-    <td><input name="name"></td>
-    <td>
-      <input type="date"
-             class="date-picker"
-             onchange="updateBirthDate(this)">
-      <input type="hidden" name="birth_date" value="" class="birth-date-hidden">
-    </td>
-    <td>
-      <div class="datetime-container">
-        <input type="datetime-local"
-               class="datetime-picker"
-               data-utc=""
-               step="60"
-               onchange="updateTimestamp(this)">
-        <button type="button" onclick="setCurrentTime(this)" class="set-now-btn">Now</button>
-        <input type="hidden" name="last_notification" value="">
+<div id="table" class="birthday-container">
+  <div class="section-header">
+    <h3 class="section-title">
+      Birthday Records
+      <span class="count-badge">{{len .}}</span>
+    </h3>
+  </div>
+
+  <div class="birthday-grid">
+    {{range $i, $b := .}}
+      {{template "card" dict "Idx" $i "B" $b}}
+    {{end}}
+
+    <!-- Add New Birthday Card -->
+    <div class="birthday-card add-birthday-card">
+      <div class="card-header">
+        <h4 class="card-name">➕ Add New Birthday</h4>
       </div>
-    </td>
-    <td><input name="chat_id"></td>
-    <td><button type="submit">Add</button></td>
-  </form>
-</tr>
-</table>
+
+      <form hx-post="/save-row" hx-target="#table" hx-swap="outerHTML" class="add-form">
+        <input type="hidden" name="idx" value="-1">
+
+        <div class="card-field">
+          <label class="field-label">Name</label>
+          <input name="name" placeholder="Enter name" class="form-input">
+        </div>
+
+        <div class="card-field">
+          <label class="field-label">Birth Date</label>
+          <input type="date"
+                 name="birth_date"
+                 class="form-input">
+        </div>
+
+        <div class="card-field">
+          <label class="field-label">Last Notification</label>
+          <div class="datetime-container">
+            <input type="datetime-local"
+                   class="datetime-picker form-input"
+                   data-utc=""
+                   step="60"
+                   onchange="updateTimestamp(this)">
+            <button type="button" onclick="setCurrentTime(this)" class="set-now-btn">Now</button>
+            <input type="hidden" name="last_notification" value="">
+          </div>
+        </div>
+
+        <div class="card-field">
+          <label class="field-label">Chat ID</label>
+          <input name="chat_id" placeholder="Chat ID" class="form-input">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-save">Add Birthday</button>
+      </form>
+    </div>
+  </div>
 </div>
 {{end}}

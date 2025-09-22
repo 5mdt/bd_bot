@@ -3,12 +3,12 @@ package handlers
 import (
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"5mdt/bd_bot/internal/logger"
 	"5mdt/bd_bot/internal/models"
 	"5mdt/bd_bot/internal/storage"
 )
@@ -19,12 +19,15 @@ type PageData struct {
 }
 
 type BotInfo struct {
-	Status            string
-	Username          string
-	FirstName         string
-	Uptime            string
-	NotificationsSent int64
-	Configured        bool
+	Status               string
+	Username             string
+	FirstName            string
+	Uptime               string
+	NotificationsSent    int64
+	NotificationHours    string
+	NextCheckTime        string
+	CurrentHourInWindow  bool
+	Configured           bool
 }
 
 type BotStatusProvider interface {
@@ -33,6 +36,7 @@ type BotStatusProvider interface {
 	GetFirstName() string
 	GetUptime() time.Duration
 	GetNotificationsSent() int64
+	GetNotificationHours() (int, int)
 }
 
 func formatUptime(d time.Duration) string {
@@ -52,6 +56,31 @@ func formatUptime(d time.Duration) string {
 	return fmt.Sprintf("%dd %dh", days, hours)
 }
 
+func formatNotificationHours(startHour, endHour int) string {
+	if startHour <= endHour {
+		return fmt.Sprintf("%02d:00 - %02d:00 UTC", startHour, endHour)
+	} else {
+		// Crosses midnight
+		return fmt.Sprintf("%02d:00 - %02d:00 UTC (next day)", startHour, endHour)
+	}
+}
+
+func isCurrentlyInNotificationWindow(startHour, endHour int) bool {
+	currentHour := time.Now().UTC().Hour()
+	if startHour <= endHour {
+		return currentHour >= startHour && currentHour <= endHour
+	} else {
+		// Crosses midnight
+		return currentHour >= startHour || currentHour <= endHour
+	}
+}
+
+func calculateNextCheckTime() string {
+	now := time.Now().UTC()
+	nextMinute := now.Truncate(time.Minute).Add(time.Minute)
+	return nextMinute.Format("15:04:05 UTC")
+}
+
 func parseIdx(r *http.Request) (int, error) {
 	if err := r.ParseForm(); err != nil {
 		return 0, err
@@ -60,8 +89,9 @@ func parseIdx(r *http.Request) (int, error) {
 }
 
 func updateBirthdayFromForm(b *models.Birthday, r *http.Request) {
+	originalBirthDate := b.BirthDate
 	b.Name = r.FormValue("name")
-	b.BirthDate = normalizeDate(r.FormValue("birth_date"))
+	b.BirthDate = normalizeDateWithOriginal(r.FormValue("birth_date"), originalBirthDate)
 
 	// Parse timestamp from form
 	if timestampStr := r.FormValue("last_notification"); timestampStr != "" {
@@ -103,10 +133,46 @@ func normalizeDate(s string) string {
 	return s
 }
 
+func normalizeDateWithOriginal(s string, originalBirthDate string) string {
+	if s == "" {
+		return ""
+	}
+
+	// Handle "MM-DD" format - convert to "0000-MM-DD"
+	if len(s) == 5 && strings.Count(s, "-") == 1 {
+		return "0000-" + s
+	}
+
+	// Handle "YYYY-MM-DD" format
+	parsedDate, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return ""
+	}
+
+	currentYear := time.Now().Year()
+
+	// If original was a 0000 date and user enters current year, keep it as 0000
+	if strings.HasPrefix(originalBirthDate, "0000-") && parsedDate.Year() == currentYear {
+		month := parsedDate.Format("01")
+		day := parsedDate.Format("02")
+		return "0000-" + month + "-" + day
+	}
+
+	// For new birthdays (empty originalBirthDate) with current year, normalize to 0000
+	if originalBirthDate == "" && parsedDate.Year() == currentYear {
+		month := parsedDate.Format("01")
+		day := parsedDate.Format("02")
+		return "0000-" + month + "-" + day
+	}
+
+	// For any other case, keep the entered date as-is
+	return s
+}
+
 func loadBirthdaysOrError(w http.ResponseWriter) ([]models.Birthday, bool) {
 	bs, err := storage.LoadBirthdays()
 	if err != nil {
-		log.Println("LoadBirthdays error:", err)
+		logger.Error("HANDLERS", "LoadBirthdays error: %v", err)
 		http.Error(w, "Load error", 500)
 		return nil, false
 	}
@@ -122,13 +188,17 @@ func IndexHandler(tpl *template.Template, botProvider BotStatusProvider) http.Ha
 
 		var botInfo BotInfo
 		if botProvider != nil {
+			startHour, endHour := botProvider.GetNotificationHours()
 			botInfo = BotInfo{
-				Status:            botProvider.GetStatus(),
-				Username:          botProvider.GetUsername(),
-				FirstName:         botProvider.GetFirstName(),
-				Uptime:            formatUptime(botProvider.GetUptime()),
-				NotificationsSent: botProvider.GetNotificationsSent(),
-				Configured:        true,
+				Status:               botProvider.GetStatus(),
+				Username:             botProvider.GetUsername(),
+				FirstName:            botProvider.GetFirstName(),
+				Uptime:               formatUptime(botProvider.GetUptime()),
+				NotificationsSent:    botProvider.GetNotificationsSent(),
+				NotificationHours:    formatNotificationHours(startHour, endHour),
+				NextCheckTime:        calculateNextCheckTime(),
+				CurrentHourInWindow:  isCurrentlyInNotificationWindow(startHour, endHour),
+				Configured:           true,
 			}
 		} else {
 			botInfo = BotInfo{
@@ -143,7 +213,7 @@ func IndexHandler(tpl *template.Template, botProvider BotStatusProvider) http.Ha
 		}
 
 		if err := tpl.ExecuteTemplate(w, "page", data); err != nil {
-			log.Println("Template execute error:", err)
+			logger.Error("HANDLERS", "Template execute error: %v", err)
 			http.Error(w, "Render error", 500)
 		}
 	}
@@ -153,7 +223,7 @@ func SaveRowHandler(tpl *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		idx, err := parseIdx(r)
 		if err != nil {
-			log.Println("parseIdx error:", err)
+			logger.Error("HANDLERS", "parseIdx error: %v", err)
 			http.Error(w, "Invalid idx", 400)
 			return
 		}
@@ -169,7 +239,7 @@ func SaveRowHandler(tpl *template.Template) http.HandlerFunc {
 			bs = append(bs, b)
 		} else {
 			if idx < 0 || idx >= len(bs) {
-				log.Println("SaveRowHandler invalid idx:", idx)
+				logger.Error("HANDLERS", "SaveRowHandler invalid idx: %d", idx)
 				http.Error(w, "Invalid idx", 400)
 				return
 			}
@@ -177,12 +247,12 @@ func SaveRowHandler(tpl *template.Template) http.HandlerFunc {
 		}
 
 		if err := storage.SaveBirthdays(bs); err != nil {
-			log.Println("SaveBirthdays error:", err)
+			logger.Error("HANDLERS", "SaveBirthdays error: %v", err)
 			http.Error(w, "Save error", 500)
 			return
 		}
 		if err := tpl.ExecuteTemplate(w, "table", bs); err != nil {
-			log.Println("Template execute error:", err)
+			logger.Error("HANDLERS", "Template execute error: %v", err)
 			http.Error(w, "Render error", 500)
 		}
 	}
@@ -192,7 +262,7 @@ func DeleteRowHandler(tpl *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		idx, err := parseIdx(r)
 		if err != nil {
-			log.Println("parseIdx error:", err)
+			logger.Error("HANDLERS", "parseIdx error: %v", err)
 			http.Error(w, "Invalid idx", 400)
 			return
 		}
@@ -205,15 +275,15 @@ func DeleteRowHandler(tpl *template.Template) http.HandlerFunc {
 		if idx >= 0 && idx < len(bs) {
 			bs = append(bs[:idx], bs[idx+1:]...)
 			if err := storage.SaveBirthdays(bs); err != nil {
-				log.Println("SaveBirthdays error:", err)
+				logger.Error("HANDLERS", "SaveBirthdays error: %v", err)
 				http.Error(w, "Save error", 500)
 				return
 			}
 		} else {
-			log.Println("DeleteRowHandler invalid idx:", idx)
+			logger.Error("HANDLERS", "DeleteRowHandler invalid idx: %d", idx)
 		}
 		if err := tpl.ExecuteTemplate(w, "table", bs); err != nil {
-			log.Println("Template execute error:", err)
+			logger.Error("HANDLERS", "Template execute error: %v", err)
 			http.Error(w, "Render error", 500)
 		}
 	}

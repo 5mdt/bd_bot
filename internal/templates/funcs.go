@@ -2,6 +2,7 @@ package templates
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -43,4 +44,21 @@ func formatBirthDate(birthDate string) string {
 		return strings.TrimPrefix(birthDate, "0000-")
 	}
 	return birthDate
+}
+
+// formatBirthDateForInput formats birth date for HTML date input
+// If year is 0000 (unknown), substitute current year so browser can display it
+// Otherwise return the full date for the input
+func formatBirthDateForInput(birthDate string) string {
+	if strings.HasPrefix(birthDate, "0000-") {
+		// Replace 0000 with current year for browser display
+		currentYear := time.Now().Year()
+		return strings.Replace(birthDate, "0000", fmt.Sprintf("%d", currentYear), 1)
+	}
+	return birthDate
+}
+
+// isUnknownYear checks if a birth date has an unknown year (0000)
+func isUnknownYear(birthDate string) bool {
+	return strings.HasPrefix(birthDate, "0000-")
 }

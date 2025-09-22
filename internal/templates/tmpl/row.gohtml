@@ -1,38 +1,57 @@
-{{define "row"}}
-<tr>
-  <form hx-post="/save-row" hx-target="#table" hx-swap="outerHTML" style="display:inline">
+{{define "card"}}
+<div class="birthday-card">
+  <div class="card-header">
+    <h4 class="card-name">{{.B.Name}}</h4>
+    <div class="card-actions">
+      <form hx-post="/delete-row" hx-target="#table" hx-swap="outerHTML" style="display:inline">
+        <input type="hidden" name="idx" value="{{.Idx}}">
+        <button type="submit" class="btn btn-danger btn-sm" title="Delete">🗑️</button>
+      </form>
+    </div>
+  </div>
+
+  <form hx-post="/save-row" hx-target="#table" hx-swap="outerHTML" class="card-form" onchange="checkFormChanges(this)">
     <input type="hidden" name="idx" value="{{.Idx}}">
-    <td><input name="name" value="{{.B.Name}}"></td>
-    <td>
-      <div class="birth-date-container">
-        <span class="birth-date-display">{{formatBirthDate .B.BirthDate}}</span>
-        <input type="date"
-               class="date-picker"
-               value="{{.B.BirthDate}}"
-               onchange="updateBirthDate(this)"
-               style="margin-top: 4px;">
-        <input type="hidden" name="birth_date" value="{{.B.BirthDate}}" class="birth-date-hidden">
-      </div>
-    </td>
-    <td>
+
+    <!-- Store original values for change detection -->
+    <input type="hidden" class="original-name" value="{{.B.Name}}">
+    <input type="hidden" class="original-birth-date" value="{{.B.BirthDate}}">
+    <input type="hidden" class="original-last-notification" value="{{formatTime .B.LastNotification}}">
+    <input type="hidden" class="original-chat-id" value="{{.B.ChatID}}">
+
+    <div class="card-field">
+      <label class="field-label">Name</label>
+      <input name="name" value="{{.B.Name}}" class="form-input" onchange="checkFormChanges(this.form)">
+    </div>
+
+    <div class="card-field">
+      <label class="field-label">Birth Date{{if isUnknownYear .B.BirthDate}} (year unknown){{end}}</label>
+      <input type="date"
+             name="birth_date"
+             class="form-input"
+             value="{{formatBirthDateForInput .B.BirthDate}}"
+             onchange="checkFormChanges(this.form)">
+    </div>
+
+    <div class="card-field">
+      <label class="field-label">Last Notification</label>
       <div class="datetime-container">
         <input type="datetime-local"
-               class="datetime-picker"
+               class="datetime-picker form-input"
                data-utc="{{formatTime .B.LastNotification}}"
                step="60"
-               onchange="updateTimestamp(this)">
+               onchange="updateTimestamp(this); checkFormChanges(this.form)">
         <button type="button" onclick="setCurrentTime(this)" class="set-now-btn">Now</button>
         <input type="hidden" name="last_notification" value="{{formatTime .B.LastNotification}}">
       </div>
-    </td>
-    <td><input name="chat_id" value="{{.B.ChatID}}"></td>
-    <td>
-      <button type="submit">Save</button>
+    </div>
+
+    <div class="card-field">
+      <label class="field-label">Chat ID</label>
+      <input name="chat_id" value="{{.B.ChatID}}" class="form-input" onchange="checkFormChanges(this.form)">
+    </div>
+
+    <button type="submit" class="btn btn-save btn-unchanged">No Changes</button>
   </form>
-  <form hx-post="/delete-row" hx-target="#table" hx-swap="outerHTML" style="display:inline">
-      <input type="hidden" name="idx" value="{{.Idx}}">
-      <button type="submit">Delete</button>
-  </form>
-  </td>
-</tr>
+</div>
 {{end}}

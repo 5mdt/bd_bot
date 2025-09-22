@@ -1,0 +1,83 @@
+{{define "bot-info"}}
+<div class="bot-info-container">
+    <h2>🤖 Telegram Bot Status</h2>
+
+    {{if .Bot.Configured}}
+    <div class="bot-details">
+        <!-- Primary Status Row -->
+        <div class="bot-status-row">
+            <div class="status-primary">
+                <span class="detail-label">Status:</span>
+                <span class="status-value {{if eq .Bot.Status "running"}}status-running{{else if eq .Bot.Status "stopped"}}status-stopped{{else}}status-other{{end}}">
+                    {{.Bot.Status}}
+                </span>
+            </div>
+            <div class="notification-window-indicator">
+                {{if .Bot.CurrentHourInWindow}}
+                    <span class="window-status window-active">🟢 Notification Window Active</span>
+                {{else}}
+                    <span class="window-status window-inactive">⚫ Outside Notification Window</span>
+                {{end}}
+            </div>
+        </div>
+
+        <!-- Bot Identity Section -->
+        <div class="bot-section">
+            <h3>Bot Identity</h3>
+            <div class="bot-detail-row">
+                <span class="detail-label">Bot Name:</span>
+                <span class="detail-value">{{.Bot.FirstName}}</span>
+            </div>
+            <div class="bot-detail-row">
+                <span class="detail-label">Username:</span>
+                <span class="detail-value">@{{.Bot.Username}}</span>
+            </div>
+        </div>
+
+        <!-- Operation Statistics Section -->
+        <div class="bot-section">
+            <h3>Operation Statistics</h3>
+            <div class="bot-detail-row">
+                <span class="detail-label">Uptime:</span>
+                <span class="detail-value">{{.Bot.Uptime}}</span>
+            </div>
+            <div class="bot-detail-row">
+                <span class="detail-label">Notifications Sent:</span>
+                <span class="detail-value highlight-number">{{.Bot.NotificationsSent}}</span>
+            </div>
+        </div>
+
+        <!-- Notification Schedule Section -->
+        <div class="bot-section">
+            <h3>Notification Schedule</h3>
+            <div class="bot-detail-row">
+                <span class="detail-label">Active Hours:</span>
+                <span class="detail-value">{{.Bot.NotificationHours}}</span>
+            </div>
+            <div class="bot-detail-row">
+                <span class="detail-label">Next Check:</span>
+                <span class="detail-value next-check">{{.Bot.NextCheckTime}}</span>
+            </div>
+            <div class="bot-detail-row">
+                <span class="detail-label">Check Frequency:</span>
+                <span class="detail-value">
+                    {{if .Bot.CurrentHourInWindow}}
+                        Every minute (active window)
+                    {{else}}
+                        Every hour (outside window)
+                    {{end}}
+                </span>
+            </div>
+        </div>
+    </div>
+    {{else}}
+    <div class="bot-not-configured">
+        <div class="bot-detail-row">
+            <span class="detail-label">Status:</span>
+            <span class="status-value status-not-configured">{{.Bot.Status}}</span>
+        </div>
+        <p class="help-text">Set the <code>TELEGRAM_BOT_TOKEN</code> environment variable to enable the Telegram bot.</p>
+    </div>
+    {{end}}
+</div>
+{{end}}

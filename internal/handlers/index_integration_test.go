@@ -26,7 +26,7 @@ func TestIntegration_IndexHandler(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("want 200, got %d", w.Code)
 	}
-	if !strings.Contains(w.Body.String(), "<table") {
-		t.Fatal("response missing table")
+	if !strings.Contains(w.Body.String(), "birthday-container") {
+		t.Fatal("response missing birthday container")
 	}
 }

@@ -1,0 +1,695 @@
+{{define "styles"}}
+<style>
+/* GitHub-style CSS Variables */
+:root {
+    --color-canvas-default: #ffffff;
+    --color-canvas-subtle: #f6f8fa;
+    --color-canvas-inset: #f6f8fa;
+    --color-border-default: #d1d9e0;
+    --color-border-muted: #d8dee4;
+    --color-fg-default: #1f2328;
+    --color-fg-muted: #656d76;
+    --color-fg-subtle: #6e7781;
+    --color-accent-fg: #0969da;
+    --color-accent-emphasis: #0969da;
+    --color-success-fg: #1a7f37;
+    --color-success-emphasis: #1f883d;
+    --color-danger-fg: #d1242f;
+    --color-danger-emphasis: #da3633;
+    --color-neutral-emphasis: #6e7781;
+    --border-radius: 6px;
+    --shadow-small: 0 1px 3px rgba(16, 22, 26, 0.1);
+    --shadow-medium: 0 3px 6px rgba(16, 22, 26, 0.15);
+}
+
+/* Base styles */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-fg-default);
+    background-color: var(--color-canvas-default);
+    margin: 0;
+    padding: 24px;
+    min-height: 100vh;
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+/* Header */
+h1 {
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--color-fg-default);
+    margin: 0 0 24px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border-muted);
+}
+
+/* Birthday container */
+.birthday-container {
+    background: var(--color-canvas-subtle);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.section-header {
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border-muted);
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-fg-default);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.count-badge {
+    background: var(--color-neutral-emphasis);
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 12px;
+    min-width: 20px;
+    text-align: center;
+}
+
+/* Birthday grid */
+.birthday-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+/* Birthday cards */
+.birthday-card {
+    background: var(--color-canvas-default);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--border-radius);
+    padding: 16px;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.birthday-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border-muted);
+}
+
+.card-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-fg-default);
+    margin: 0;
+}
+
+.card-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.card-field {
+    margin-bottom: 12px;
+}
+
+.field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-fg-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.card-form,
+.add-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.btn-save {
+    margin-top: 8px;
+    align-self: flex-start;
+    transition: all 0.2s ease;
+}
+
+.btn-unchanged {
+    background-color: var(--color-neutral-emphasis) !important;
+    border-color: var(--color-neutral-emphasis) !important;
+    color: #ffffff !important;
+}
+
+.btn-unchanged:hover {
+    background-color: #57606a !important;
+    border-color: #57606a !important;
+    cursor: default;
+}
+
+.btn-changed {
+    background-color: var(--color-success-emphasis) !important;
+    border-color: var(--color-success-emphasis) !important;
+    color: #ffffff !important;
+}
+
+.btn-changed:hover {
+    background-color: #1a7f37 !important;
+    border-color: #1a7f37 !important;
+}
+
+/* Add birthday section */
+.add-birthday-section {
+    background: var(--color-canvas-default);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin-top: 24px;
+}
+
+.add-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-fg-default);
+    margin: 0 0 16px 0;
+}
+
+.add-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    align-items: end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-fg-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.btn-add {
+    height: fit-content;
+    padding: 8px 16px;
+}
+
+/* Form inputs */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"],
+.form-input {
+    background-color: var(--color-canvas-default);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--border-radius);
+    color: var(--color-fg-default);
+    font-size: 14px;
+    padding: 8px 12px;
+    width: 100%;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+.form-input:focus {
+    border-color: var(--color-accent-emphasis);
+    outline: none;
+}
+
+/* Modified field styling */
+.form-input.field-modified {
+    border-color: var(--color-success-emphasis) !important;
+    box-shadow: 0 0 0 2px rgba(31, 136, 61, 0.2) !important;
+    background-color: rgba(209, 250, 223, 0.3) !important;
+}
+
+.form-input.field-modified:focus {
+    border-color: var(--color-success-emphasis) !important;
+    box-shadow: 0 0 0 3px rgba(31, 136, 61, 0.3) !important;
+}
+
+/* DateTime container */
+.datetime-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 280px;
+}
+
+.datetime-picker {
+    min-width: 200px;
+    flex: 1;
+}
+
+.date-picker {
+    min-width: 150px;
+}
+
+/* Buttons */
+button {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    padding: 6px 16px;
+    border-radius: var(--border-radius);
+    border: 1px solid;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+/* Primary button (Save, Add) - but not unchanged buttons */
+button[type="submit"]:not(.btn-danger):not(.btn-unchanged) {
+    background-color: var(--color-success-emphasis);
+    border-color: var(--color-success-emphasis);
+    color: #ffffff;
+    margin-right: 8px;
+}
+
+button[type="submit"]:not(.btn-danger):not(.btn-unchanged):hover {
+    background-color: #1a7f37;
+    border-color: #1a7f37;
+}
+
+/* Delete button */
+form[style*="display:inline"] button[type="submit"]:last-of-type,
+.btn-danger {
+    background-color: var(--color-danger-emphasis);
+    border-color: var(--color-danger-emphasis);
+    color: #ffffff;
+}
+
+form[style*="display:inline"] button[type="submit"]:last-of-type:hover,
+.btn-danger:hover {
+    background-color: #d1242f;
+    border-color: #d1242f;
+}
+
+/* Now button */
+.set-now-btn {
+    background-color: var(--color-neutral-emphasis);
+    border-color: var(--color-neutral-emphasis);
+    color: #ffffff;
+    padding: 6px 12px;
+    font-size: 12px;
+    min-width: auto;
+    flex-shrink: 0;
+}
+
+.set-now-btn:hover {
+    background-color: #57606a;
+    border-color: #57606a;
+}
+
+/* Action cell */
+td:last-child {
+    white-space: nowrap;
+    width: 1%;
+}
+
+/* Form layout within table cells */
+form[style*="display:inline"] {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    body {
+        padding: 16px 8px;
+    }
+
+    .container {
+        padding: 0 8px;
+    }
+
+    h1 {
+        font-size: 24px;
+        margin-bottom: 16px;
+    }
+
+    .birthday-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .birthday-card {
+        padding: 12px;
+    }
+
+    .add-form {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .datetime-container {
+        min-width: auto;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .set-now-btn {
+        width: fit-content;
+        align-self: flex-start;
+    }
+
+    button {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+
+    .section-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}
+
+/* Helper text */
+.help-text {
+    color: var(--color-fg-muted);
+    font-size: 12px;
+    margin-top: 4px;
+    display: block;
+}
+
+/* Button sizing */
+.btn {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    padding: 6px 16px;
+    border-radius: var(--border-radius);
+    border: 1px solid;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.btn-sm {
+    font-size: 12px;
+    padding: 4px 8px;
+    line-height: 16px;
+}
+
+.btn-primary {
+    background-color: var(--color-accent-emphasis);
+    border-color: var(--color-accent-emphasis);
+    color: #ffffff;
+}
+
+.btn-primary:hover {
+    background-color: #0969da;
+    border-color: #0969da;
+}
+
+.btn-danger {
+    background-color: var(--color-danger-emphasis);
+    border-color: var(--color-danger-emphasis);
+    color: #ffffff;
+}
+
+.btn-danger:hover {
+    background-color: #d1242f;
+    border-color: #d1242f;
+}
+
+/* Remove duplicate input styling - use base styles above */
+
+/* Action buttons container */
+.action-buttons {
+    white-space: nowrap;
+    width: 1%;
+}
+
+.action-buttons form {
+    display: inline-block;
+}
+
+/* Remove excessive add-row styling - tables use base table styles */
+
+/* Birth date display */
+.birth-date-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.birth-date-display {
+    font-weight: 600;
+    color: var(--color-fg-default);
+    background: var(--color-canvas-subtle);
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border-muted);
+    font-size: 14px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+/* Bot Information section */
+.bot-info-container {
+    background: var(--color-canvas-subtle);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.bot-info-container h2 {
+    margin: 0 0 20px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-fg-default);
+    border-bottom: 1px solid var(--color-border-muted);
+    padding-bottom: 8px;
+}
+
+.bot-details {
+    display: grid;
+    gap: 20px;
+}
+
+/* Primary Status Row */
+.bot-status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: var(--color-canvas-default);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border-default);
+    margin-bottom: 8px;
+}
+
+.status-primary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.notification-window-indicator {
+    display: flex;
+    align-items: center;
+}
+
+.window-status {
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid;
+}
+
+.window-active {
+    color: var(--color-success-fg);
+    background-color: #d1fadf;
+    border-color: #a3e635;
+}
+
+.window-inactive {
+    color: var(--color-neutral-emphasis);
+    background-color: #f6f8fa;
+    border-color: #d1d9e0;
+}
+
+/* Bot Sections */
+.bot-section {
+    background: var(--color-canvas-default);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border-muted);
+    padding: 16px;
+}
+
+.bot-section h3 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-fg-default);
+    border-bottom: 1px solid var(--color-border-muted);
+    padding-bottom: 6px;
+}
+
+.bot-detail-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-border-muted);
+}
+
+.bot-detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: var(--color-fg-default);
+    font-size: 14px;
+    min-width: 140px;
+    flex-shrink: 0;
+}
+
+.detail-value {
+    font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 14px;
+    color: var(--color-fg-muted);
+    background: var(--color-canvas-subtle);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border-muted);
+}
+
+.highlight-number {
+    font-weight: 600;
+    color: var(--color-accent-fg) !important;
+    background: #f0f8ff !important;
+    border-color: var(--color-accent-emphasis) !important;
+}
+
+.next-check {
+    color: var(--color-success-fg) !important;
+    background: #f0fff4 !important;
+    border-color: #a3e635 !important;
+    font-weight: 500;
+}
+
+.bot-not-configured {
+    display: grid;
+    gap: 12px;
+}
+
+.bot-not-configured .help-text {
+    margin: 8px 0 0 0;
+    padding: 12px;
+    background: var(--color-canvas-default);
+    border-radius: 4px;
+    border: 1px solid var(--color-border-muted);
+}
+
+.bot-not-configured code {
+    background: var(--color-neutral-emphasis);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 12px;
+}
+
+/* Responsive design for bot status */
+@media (max-width: 768px) {
+    .bot-status-row {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+
+    .detail-label {
+        min-width: auto;
+    }
+
+    .bot-detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+}
+
+.status-value {
+    font-weight: 500;
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: capitalize;
+}
+
+.status-running {
+    background-color: #d1fadf;
+    color: var(--color-success-fg);
+    border: 1px solid #a3e635;
+}
+
+.status-stopped {
+    background-color: #ffebe9;
+    color: var(--color-danger-fg);
+    border: 1px solid #fda29b;
+}
+
+.status-not-configured {
+    background-color: #f1f3f4;
+    color: #5f6368;
+    border: 1px solid #dadce0;
+}
+
+.status-other {
+    background-color: #fff8dc;
+    color: #9a6700;
+    border: 1px solid #d1a827;
+}
+</style>
+{{end}}
