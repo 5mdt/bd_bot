@@ -24,7 +24,7 @@ PKG=5mdt/bd_bot/...
 # Ensure build directory exists
 $(shell mkdir -p $(BUILD_DIR))
 
-.PHONY: all test vet fmt clean build build-linux build-darwin build-windows deps pre-commit
+.PHONY: all test vet fmt clean build build-linux build-darwin build-windows build-all deps pre-commit docker-build docker-run ci
 
 # Default target
 all: fmt vet test build
