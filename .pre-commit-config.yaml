@@ -1,0 +1,56 @@
+# .pre-commit-config.yaml
+
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        always_run: true
+      - id: end-of-file-fixer
+        always_run: true
+      - id: check-yaml
+        always_run: true
+      - id: check-added-large-files
+        always_run: true
+      - id: check-merge-conflict
+        always_run: true
+      - id: check-symlinks
+        always_run: true
+      - id: detect-private-key
+        always_run: true
+      - id: no-commit-to-branch
+        args: ['--branch', 'main']
+        always_run: true
+
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.55.2
+    hooks:
+      - id: golangci-lint
+        args: [--fix, --timeout=5m]
+        always_run: true
+
+  - repo: local
+    hooks:
+      - id: go-fmt
+        name: go fmt
+        entry: gofmt -w .
+        language: system
+        types: [go]
+        always_run: true
+
+      - id: go-vet
+        name: go vet
+        entry: go vet ./...
+        language: system
+        types: [go]
+        pass_filenames: false
+        always_run: true
+
+      - id: go-tests
+        name: go test
+        entry: go test 5mdt/bd_bot/...
+        language: system
+        types: [go]
+        pass_filenames: false
+        always_run: true

@@ -24,7 +24,6 @@ func main() {
 
 	tpl := templates.LoadTemplates()
 
-
 	http.HandleFunc("/", handlers.IndexHandler(tpl, telegramBot))
 	http.HandleFunc("/bot-info", handlers.BotInfoHandler(tpl, telegramBot))
 	http.HandleFunc("/save-row", handlers.SaveRowHandler(tpl))

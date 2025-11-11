@@ -47,11 +47,11 @@ func TestMainHandlers(t *testing.T) {
 	}
 
 	form := url.Values{
-		"idx":              {"-1"},
-		"name":             {"X"},
-		"birth_date":       {"01-01"},
-		"last_notification":{"2025-01-01T12:00:00Z"},
-		"chat_id":          {"1"},
+		"idx":               {"-1"},
+		"name":              {"X"},
+		"birth_date":        {"01-01"},
+		"last_notification": {"2025-01-01T12:00:00Z"},
+		"chat_id":           {"1"},
 	}
 	w = doRequest(t, "POST", "/save-row", form, handlers.SaveRowHandler(tpl))
 	if w.Code != http.StatusOK {
