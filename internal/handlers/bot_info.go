@@ -15,15 +15,15 @@ func BotInfoHandler(tpl *template.Template, botProvider BotStatusProvider) http.
 		if botProvider != nil && botProvider.GetStatus() != "not configured" {
 			startHour, endHour := botProvider.GetNotificationHours()
 			botInfo = BotInfo{
-				Status:               botProvider.GetStatus(),
-				Username:             botProvider.GetUsername(),
-				FirstName:            botProvider.GetFirstName(),
-				Uptime:               formatUptime(botProvider.GetUptime()),
-				NotificationsSent:    botProvider.GetNotificationsSent(),
-				NotificationHours:    formatNotificationHours(startHour, endHour),
-				NextCheckTime:        calculateNextCheckTime(),
-				CurrentHourInWindow:  isCurrentlyInNotificationWindow(startHour, endHour),
-				Configured:           true,
+				Status:              botProvider.GetStatus(),
+				Username:            botProvider.GetUsername(),
+				FirstName:           botProvider.GetFirstName(),
+				Uptime:              formatUptime(botProvider.GetUptime()),
+				NotificationsSent:   botProvider.GetNotificationsSent(),
+				NotificationHours:   formatNotificationHours(startHour, endHour),
+				NextCheckTime:       calculateNextCheckTime(),
+				CurrentHourInWindow: isCurrentlyInNotificationWindow(startHour, endHour),
+				Configured:          true,
 			}
 		} else {
 			botInfo = BotInfo{

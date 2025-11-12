@@ -10,24 +10,24 @@ import (
 	"sync"
 	"time"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"5mdt/bd_bot/internal/logger"
 	"5mdt/bd_bot/internal/models"
 	"5mdt/bd_bot/internal/storage"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type Bot struct {
-	api                 *tgbotapi.BotAPI
-	status              string
-	username            string
-	firstName           string
-	startTime           time.Time
-	notificationsSent   int64
+	api                   *tgbotapi.BotAPI
+	status                string
+	username              string
+	firstName             string
+	startTime             time.Time
+	notificationsSent     int64
 	notificationStartHour int // Start hour for notifications (0-23, UTC)
 	notificationEndHour   int // End hour for notifications (0-23, UTC)
-	mu                  sync.RWMutex
-	ctx                 context.Context
-	cancel              context.CancelFunc
+	mu                    sync.RWMutex
+	ctx                   context.Context
+	cancel                context.CancelFunc
 }
 
 func New(token string) (*Bot, error) {
@@ -47,8 +47,8 @@ func New(token string) (*Bot, error) {
 	}
 
 	// Parse notification hours from environment variables
-	notificationStartHour := 8  // Default: 8 AM UTC
-	notificationEndHour := 20   // Default: 8 PM UTC
+	notificationStartHour := 8 // Default: 8 AM UTC
+	notificationEndHour := 20  // Default: 8 PM UTC
 
 	if startHourStr := os.Getenv("NOTIFICATION_START_HOUR"); startHourStr != "" {
 		if hour, err := strconv.Atoi(startHourStr); err == nil && hour >= 0 && hour <= 23 {
@@ -69,15 +69,15 @@ func New(token string) (*Bot, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	bot := &Bot{
-		api:                 api,
-		status:              "starting",
-		username:            me.UserName,
-		firstName:           me.FirstName,
-		startTime:           time.Now(),
+		api:                   api,
+		status:                "starting",
+		username:              me.UserName,
+		firstName:             me.FirstName,
+		startTime:             time.Now(),
 		notificationStartHour: notificationStartHour,
 		notificationEndHour:   notificationEndHour,
-		ctx:                 ctx,
-		cancel:              cancel,
+		ctx:                   ctx,
+		cancel:                cancel,
 	}
 
 	logger.Info("BOT", "Bot initialized successfully")
@@ -444,7 +444,6 @@ func (b *Bot) handleMyInfoCommand(message *tgbotapi.Message) {
 	}
 }
 
-
 func (b *Bot) handleChatTitleChange(message *tgbotapi.Message) {
 	newTitle := message.NewChatTitle
 	chatID := message.Chat.ID
@@ -528,6 +527,24 @@ func (b *Bot) checkBirthdays() {
 	}
 }
 
+func (b *Bot) shouldSendBirthdayNotification(birthday models.Birthday, notificationType string, daysDiff int) bool {
+	// Always send birthday today notification
+	if notificationType == "BIRTHDAY_TODAY" {
+		// Check if last notification was today
+		now := time.Now().UTC()
+		lastNotificationDate := ""
+		if !birthday.LastNotification.IsZero() {
+			lastNotificationDate = birthday.LastNotification.Format("2006-01-02")
+		}
+
+		todayDate := now.Format("2006-01-02")
+		return lastNotificationDate != todayDate
+	}
+
+	// For 2 and 4 weeks reminders, previous checks in the function will handle skipping
+	return true
+}
+
 func (b *Bot) processBirthdays() {
 	now := time.Now().UTC()
 	currentHour := now.Hour()
@@ -571,7 +588,7 @@ func (b *Bot) processBirthdays() {
 		// Extract MM-DD from birth date
 		var birthdayMMDD string
 		if len(birthday.BirthDate) >= 7 { // At least "0000-MM" or "YYYY-MM"
-			parts := birthday.BirthDate[5:] // Skip "0000-" or "YYYY-"
+			parts := birthday.BirthDate[5:]           // Skip "0000-" or "YYYY-"
 			if len(parts) >= 5 && parts[2:3] == "-" { // MM-DD
 				birthdayMMDD = parts
 			}
@@ -601,7 +618,6 @@ func (b *Bot) processBirthdays() {
 		}
 
 		var message string
-		var shouldSend bool
 		var notificationType string
 
 		// Parse the birthday MM-DD to determine this year's birthday date
@@ -622,17 +638,14 @@ func (b *Bot) processBirthdays() {
 		if daysDiff == 0 {
 			// Birthday is today
 			message = fmt.Sprintf("🎉 Happy Birthday, %s! 🎂", birthday.Name)
-			shouldSend = true
 			notificationType = "BIRTHDAY_TODAY"
 		} else if daysDiff == 14 {
 			// Birthday is in exactly 2 weeks
 			message = fmt.Sprintf("📅 Reminder: %s's birthday is in 2 weeks (%s)! 🎈", birthday.Name, birthdayMMDD)
-			shouldSend = true
 			notificationType = "REMINDER_2_WEEKS"
 		} else if daysDiff == 28 {
 			// Birthday is in exactly 4 weeks
 			message = fmt.Sprintf("📅 Early reminder: %s's birthday is in 4 weeks (%s)! 🗓️", birthday.Name, birthdayMMDD)
-			shouldSend = true
 			notificationType = "REMINDER_4_WEEKS"
 		} else if daysDiff < 0 {
 			// Birthday has passed this year - check next year
@@ -645,17 +658,20 @@ func (b *Bot) processBirthdays() {
 			if nextYearDaysDiff == 14 {
 				// Birthday is in 2 weeks next year
 				message = fmt.Sprintf("📅 Reminder: %s's birthday is in 2 weeks (%s)! 🎈", birthday.Name, birthdayMMDD)
-				shouldSend = true
 				notificationType = "REMINDER_2_WEEKS_NEXT_YEAR"
 			} else if nextYearDaysDiff == 28 {
 				// Birthday is in 4 weeks next year
 				message = fmt.Sprintf("📅 Early reminder: %s's birthday is in 4 weeks (%s)! 🗓️", birthday.Name, birthdayMMDD)
-				shouldSend = true
 				notificationType = "REMINDER_4_WEEKS_NEXT_YEAR"
+			} else {
+				continue // No notification matches
 			}
+		} else {
+			continue // No notification matches
 		}
 
-		if shouldSend {
+		// Check if this notification should be sent
+		if b.shouldSendBirthdayNotification(birthday, notificationType, daysDiff) {
 			logger.LogNotification("INFO", "SENDING: Type=%s, Name='%s', ChatID=%d, Message='%s'",
 				notificationType, birthday.Name, birthday.ChatID, message)
 

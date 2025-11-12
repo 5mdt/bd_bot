@@ -19,15 +19,15 @@ type PageData struct {
 }
 
 type BotInfo struct {
-	Status               string
-	Username             string
-	FirstName            string
-	Uptime               string
-	NotificationsSent    int64
-	NotificationHours    string
-	NextCheckTime        string
-	CurrentHourInWindow  bool
-	Configured           bool
+	Status              string
+	Username            string
+	FirstName           string
+	Uptime              string
+	NotificationsSent   int64
+	NotificationHours   string
+	NextCheckTime       string
+	CurrentHourInWindow bool
+	Configured          bool
 }
 
 type BotStatusProvider interface {
@@ -190,15 +190,15 @@ func IndexHandler(tpl *template.Template, botProvider BotStatusProvider) http.Ha
 		if botProvider != nil {
 			startHour, endHour := botProvider.GetNotificationHours()
 			botInfo = BotInfo{
-				Status:               botProvider.GetStatus(),
-				Username:             botProvider.GetUsername(),
-				FirstName:            botProvider.GetFirstName(),
-				Uptime:               formatUptime(botProvider.GetUptime()),
-				NotificationsSent:    botProvider.GetNotificationsSent(),
-				NotificationHours:    formatNotificationHours(startHour, endHour),
-				NextCheckTime:        calculateNextCheckTime(),
-				CurrentHourInWindow:  isCurrentlyInNotificationWindow(startHour, endHour),
-				Configured:           true,
+				Status:              botProvider.GetStatus(),
+				Username:            botProvider.GetUsername(),
+				FirstName:           botProvider.GetFirstName(),
+				Uptime:              formatUptime(botProvider.GetUptime()),
+				NotificationsSent:   botProvider.GetNotificationsSent(),
+				NotificationHours:   formatNotificationHours(startHour, endHour),
+				NextCheckTime:       calculateNextCheckTime(),
+				CurrentHourInWindow: isCurrentlyInNotificationWindow(startHour, endHour),
+				Configured:          true,
 			}
 		} else {
 			botInfo = BotInfo{
