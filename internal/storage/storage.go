@@ -19,6 +19,14 @@ func getPath() string {
 	return "/data/birthdays.yaml"
 }
 
+// ensureParentDir creates the parent directory for the given file path if it doesn't exist.
+func ensureParentDir(filePath string) error {
+	if dir := filepath.Dir(filePath); dir != "" && dir != "." {
+		return os.MkdirAll(dir, 0755)
+	}
+	return nil
+}
+
 // LoadBirthdays reads and parses birthday data from the configured YAML file.
 // It creates an empty file (and parent directories) if it doesn't exist.
 // Returns a nil slice and error on failure.
@@ -26,10 +34,8 @@ func LoadBirthdays() ([]models.Birthday, error) {
 	filePath := getPath()
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		// Ensure parent directory exists
-		if dir := filepath.Dir(filePath); dir != "" && dir != "." {
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				return nil, err
-			}
+		if err := ensureParentDir(filePath); err != nil {
+			return nil, err
 		}
 		if err := os.WriteFile(filePath, []byte("[]\n"), filePerm); err != nil {
 			return nil, err
@@ -53,10 +59,8 @@ func SaveBirthdays(bs []models.Birthday) error {
 	}
 
 	// Ensure parent directory exists
-	if dir := filepath.Dir(filePath); dir != "" && dir != "." {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return err
-		}
+	if err := ensureParentDir(filePath); err != nil {
+		return err
 	}
 
 	return os.WriteFile(filePath, data, filePerm)
