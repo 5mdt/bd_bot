@@ -120,11 +120,18 @@ func updateBirthdayFromForm(b *models.Birthday, r *http.Request) {
 	if timestampStr := r.FormValue("last_notification"); timestampStr != "" {
 		if timestamp, err := time.Parse(time.RFC3339, timestampStr); err == nil {
 			b.LastNotification = timestamp.UTC()
+		} else {
+			logger.Error("HANDLERS", "Failed to parse last_notification '%s': %v", timestampStr, err)
 		}
 	}
 
-	if id, err := strconv.ParseInt(r.FormValue("chat_id"), 10, 64); err == nil {
-		b.ChatID = id
+	chatIDStr := r.FormValue("chat_id")
+	if chatIDStr != "" {
+		if id, err := strconv.ParseInt(chatIDStr, 10, 64); err == nil {
+			b.ChatID = id
+		} else {
+			logger.Error("HANDLERS", "Failed to parse chat_id '%s': %v", chatIDStr, err)
+		}
 	}
 }
 
@@ -308,6 +315,8 @@ func DeleteRowHandler(tpl *template.Template) http.HandlerFunc {
 			}
 		} else {
 			logger.Error("HANDLERS", "DeleteRowHandler invalid idx: %d", idx)
+			http.Error(w, "Invalid idx", http.StatusBadRequest)
+			return
 		}
 		if err := tpl.ExecuteTemplate(w, "table", bs); err != nil {
 			logger.Error("HANDLERS", "Template execute error: %v", err)
