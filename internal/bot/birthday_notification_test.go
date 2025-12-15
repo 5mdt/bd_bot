@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -104,11 +105,11 @@ func TestBirthdayDateCalculationAtDifferentTimes(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Parse the birthday MM-DD to determine this year's birthday date
-			thisYearBirthday, err := time.Parse("2006-01-02", time.Now().Format("2006")+"-"+tc.birthdayMMDD)
+			// Parse the birthday MM-DD using the test case's year
+			thisYearBirthday, err := time.Parse("2006-01-02", tc.currentTime.Format("2006")+"-"+tc.birthdayMMDD)
 			if err != nil {
-				// Use the test case's year instead
-				thisYearBirthday, err = time.Parse("2006-01-02", tc.currentTime.Format("2006")+"-"+tc.birthdayMMDD)
+				// Fallback: try parsing with explicit year from test case
+				thisYearBirthday, err = time.Parse("2006-01-02", fmt.Sprintf("%d-%s", tc.currentTime.Year(), tc.birthdayMMDD))
 				if err != nil {
 					t.Fatalf("Failed to parse birthday date: %v", err)
 				}

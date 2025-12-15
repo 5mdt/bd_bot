@@ -13,6 +13,7 @@ import (
 	"5mdt/bd_bot/internal/logger"
 	"5mdt/bd_bot/internal/models"
 	"5mdt/bd_bot/internal/storage"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -658,7 +659,7 @@ func (b *Bot) processBirthdays() {
 		} else if daysDiff < 0 {
 			// Birthday has passed this year - check next year
 			nextYearBirthday := thisYearBirthday.AddDate(1, 0, 0)
-			nextYearDaysDiff := int(nextYearBirthday.Sub(now).Hours() / 24)
+			nextYearDaysDiff := int(nextYearBirthday.Sub(nowDate).Hours() / 24)
 
 			logger.LogNotification("DEBUG", "Birthday passed this year for '%s': NextYear=%s, NextYearDaysDiff=%d",
 				birthday.Name, nextYearBirthday.Format("2006-01-02"), nextYearDaysDiff)
@@ -708,7 +709,7 @@ func (b *Bot) processBirthdays() {
 			if daysDiff < 0 {
 				// Birthday has passed, show next year info
 				nextYearBirthday := thisYearBirthday.AddDate(1, 0, 0)
-				nextYearDaysDiff := int(nextYearBirthday.Sub(now).Hours() / 24)
+				nextYearDaysDiff := int(nextYearBirthday.Sub(nowDate).Hours() / 24)
 				logger.LogNotification("DEBUG", "NO_MATCH: Birthday '%s' (%s) passed this year (%d days ago), next occurrence in %d days",
 					birthday.Name, birthdayMMDD, -daysDiff, nextYearDaysDiff)
 			} else {
