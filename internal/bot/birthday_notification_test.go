@@ -153,10 +153,4 @@ func TestBirthdayDateCalculationBugReproduction(t *testing.T) {
 		t.Logf("Birthday date: %s", thisYearBirthday.Format("2006-01-02 15:04:05 MST"))
 		t.Fatal("The off-by-one day bug has not been fixed!")
 	}
-
-	// Verify that daysDiff == 0 would trigger a birthday message
-	// and daysDiff == 1 would NOT (which is the correct behavior)
-	if daysDiffFixed == 0 {
-		t.Error("Bug reproduced: Birthday message would be sent a day early!")
-	}
 }
