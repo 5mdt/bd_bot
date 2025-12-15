@@ -135,34 +135,6 @@ func updateBirthdayFromForm(b *models.Birthday, r *http.Request) {
 	}
 }
 
-func normalizeDate(s string) string {
-	if s == "" {
-		return ""
-	}
-
-	// Handle "MM-DD" format - convert to "0000-MM-DD"
-	if len(s) == 5 && strings.Count(s, "-") == 1 {
-		return "0000-" + s
-	}
-
-	// Handle "YYYY-MM-DD" format
-	parsedDate, err := time.Parse("2006-01-02", s)
-	if err != nil {
-		return ""
-	}
-
-	// For current year dates, store as "0000-MM-DD" (year unknown)
-	currentYear := time.Now().Year()
-	if parsedDate.Year() == currentYear {
-		month := parsedDate.Format("01")
-		day := parsedDate.Format("02")
-		return "0000-" + month + "-" + day
-	}
-
-	// For other years, keep the full date
-	return s
-}
-
 func normalizeDateWithOriginal(s string, originalBirthDate string) string {
 	if s == "" {
 		return ""

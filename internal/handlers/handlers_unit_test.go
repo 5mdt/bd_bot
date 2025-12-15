@@ -5,33 +5,8 @@ import (
 	"5mdt/bd_bot/internal/models"
 	"net/http"
 	"net/url"
-	"strconv"
 	"testing"
-	"time"
 )
-
-func TestNormalizeDate(t *testing.T) {
-	currentYear := time.Now().Year()
-	currentYearStr := strconv.Itoa(currentYear)
-
-	tests := []struct {
-		in, want string
-	}{
-		{"12-31", "0000-12-31"},
-		{"2000-01-01", "2000-01-01"},
-		{currentYearStr + "-03-15", "0000-03-15"}, // Current year should become year-unknown
-		{"1990-07-20", "1990-07-20"},              // Past year should stay as-is
-		{"invalid", ""},
-		{"12345", ""},
-		{"", ""},
-	}
-	for _, tt := range tests {
-		got := normalizeDate(tt.in)
-		if got != tt.want {
-			t.Errorf("normalizeDate(%q) = %q; want %q", tt.in, got, tt.want)
-		}
-	}
-}
 
 func TestUpdateBirthdayFromForm(t *testing.T) {
 	form := url.Values{
