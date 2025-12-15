@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+// nowYear returns the current year and can be overridden in tests for deterministic behavior.
+var nowYear = func() int {
+	return time.Now().Year()
+}
+
 // dict creates a map from alternating key-value arguments for use in templates.
 // It validates that an even number of arguments are provided and all keys are strings.
 func dict(v ...interface{}) (map[string]interface{}, error) {
@@ -50,11 +55,16 @@ func formatBirthDate(birthDate string) string {
 }
 
 // formatBirthDateForInput formats a birth date string for HTML date input elements.
-// If the year is 0000 (unknown), it substitutes the current year for browser display.
+// If the year is 0000 (unknown), it substitutes a suitable year for browser display.
+// For Feb 29 (leap day), it uses 2000 to avoid invalid dates in non-leap years.
 func formatBirthDateForInput(birthDate string) string {
 	if strings.HasPrefix(birthDate, "0000-") {
+		// For leap day (Feb 29), use a fixed leap year to avoid invalid dates
+		if strings.HasPrefix(birthDate, "0000-02-29") {
+			return strings.Replace(birthDate, "0000", "2000", 1)
+		}
 		// Replace 0000 with current year for browser display
-		currentYear := time.Now().Year()
+		currentYear := nowYear()
 		return strings.Replace(birthDate, "0000", fmt.Sprintf("%d", currentYear), 1)
 	}
 	return birthDate
