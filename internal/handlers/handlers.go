@@ -111,28 +111,32 @@ func parseIdx(r *http.Request) (int, error) {
 	return strconv.Atoi(r.FormValue("idx"))
 }
 
-func updateBirthdayFromForm(b *models.Birthday, r *http.Request) {
+func updateBirthdayFromForm(b *models.Birthday, r *http.Request) error {
 	originalBirthDate := b.BirthDate
 	b.Name = r.FormValue("name")
 	b.BirthDate = normalizeDateWithOriginal(r.FormValue("birth_date"), originalBirthDate)
 
 	// Parse timestamp from form
 	if timestampStr := r.FormValue("last_notification"); timestampStr != "" {
-		if timestamp, err := time.Parse(time.RFC3339, timestampStr); err == nil {
-			b.LastNotification = timestamp.UTC()
-		} else {
+		timestamp, err := time.Parse(time.RFC3339, timestampStr)
+		if err != nil {
 			logger.Error("HANDLERS", "Failed to parse last_notification '%s': %v", timestampStr, err)
+			return fmt.Errorf("invalid last_notification format: %w", err)
 		}
+		b.LastNotification = timestamp.UTC()
 	}
 
 	chatIDStr := r.FormValue("chat_id")
 	if chatIDStr != "" {
-		if id, err := strconv.ParseInt(chatIDStr, 10, 64); err == nil {
-			b.ChatID = id
-		} else {
+		id, err := strconv.ParseInt(chatIDStr, 10, 64)
+		if err != nil {
 			logger.Error("HANDLERS", "Failed to parse chat_id '%s': %v", chatIDStr, err)
+			return fmt.Errorf("invalid chat_id format: %w", err)
 		}
+		b.ChatID = id
 	}
+
+	return nil
 }
 
 func normalizeDateWithOriginal(s string, originalBirthDate string) string {
@@ -240,7 +244,11 @@ func SaveRowHandler(tpl *template.Template) http.HandlerFunc {
 
 		if idx == -1 {
 			b := models.Birthday{}
-			updateBirthdayFromForm(&b, r)
+			if err := updateBirthdayFromForm(&b, r); err != nil {
+				logger.Error("HANDLERS", "updateBirthdayFromForm error: %v", err)
+				http.Error(w, "Invalid form data: "+err.Error(), 400)
+				return
+			}
 			bs = append(bs, b)
 		} else {
 			if idx < 0 || idx >= len(bs) {
@@ -248,7 +256,11 @@ func SaveRowHandler(tpl *template.Template) http.HandlerFunc {
 				http.Error(w, "Invalid idx", 400)
 				return
 			}
-			updateBirthdayFromForm(&bs[idx], r)
+			if err := updateBirthdayFromForm(&bs[idx], r); err != nil {
+				logger.Error("HANDLERS", "updateBirthdayFromForm error: %v", err)
+				http.Error(w, "Invalid form data: "+err.Error(), 400)
+				return
+			}
 		}
 
 		if err := storage.SaveBirthdays(bs); err != nil {
