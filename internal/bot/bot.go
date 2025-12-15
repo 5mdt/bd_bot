@@ -208,7 +208,12 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) {
 		return
 	}
 
-	// Default response for non-commands
+	// For group chats, ignore non-command messages
+	if message.Chat.Type == "group" || message.Chat.Type == "supergroup" {
+		return
+	}
+
+	// For private chats, send help prompt
 	msg := tgbotapi.NewMessage(message.Chat.ID, "Hello! Send /help to see available commands.")
 	if _, err := b.api.Send(msg); err != nil {
 		logger.Error("BOT", "Failed to send message: %v", err)

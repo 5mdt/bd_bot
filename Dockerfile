@@ -20,7 +20,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o birthdays-app ./cmd/ap
 FROM alpine:latest
 
 # Install CA certificates for HTTPS connections
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache --no-scripts add ca-certificates
 
 WORKDIR /app
 
