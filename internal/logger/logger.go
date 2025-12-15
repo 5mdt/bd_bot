@@ -56,8 +56,8 @@ func init() {
 		}
 	}
 
-	// Configure log format
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+	// Configure log format - disable default prefix since formatMessage handles all formatting
+	log.SetFlags(0)
 }
 
 func shouldLog(level LogLevel) bool {
