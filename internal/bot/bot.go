@@ -19,6 +19,12 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+// Precompiled regex patterns for date validation
+var (
+	mmddRegex = regexp.MustCompile(`^\d{2}-\d{2}$`)
+	dateRegex = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+)
+
 // Bot represents a Telegram bot instance that manages birthday notifications.
 type Bot struct {
 	// api is the Telegram Bot API client.
@@ -327,52 +333,11 @@ The bot will send you birthday greetings on your special day! 🎉`
 	}
 }
 
-func (b *Bot) handleUpdateBirthDateCommand(message *tgbotapi.Message, args string) {
-	if args == "" {
-		msg := tgbotapi.NewMessage(message.Chat.ID, "Please provide a birth date. Example: /update_birth_date 1999-12-31")
-		if _, err := b.api.Send(msg); err != nil {
-			logger.Error("BOT", "Failed to send message: %v", err)
-		}
-		return
-	}
-
-	// Handle MM-DD format by converting to 0000-MM-DD (year unknown)
-	mmddRegex := regexp.MustCompile(`^\d{2}-\d{2}$`)
-	if mmddRegex.MatchString(args) {
-		// Validate the MM-DD date
-		_, err := time.Parse("01-02", args)
-		if err != nil {
-			msg := tgbotapi.NewMessage(message.Chat.ID, "Invalid date. Please use a valid MM-DD format (e.g., 12-31)")
-			if _, err := b.api.Send(msg); err != nil {
-				logger.Error("BOT", "Failed to send message: %v", err)
-			}
-			return
-		}
-		// Convert MM-DD to 0000-MM-DD format
-		args = "0000-" + args
-	}
-
-	// Validate date format (YYYY-MM-DD)
-	dateRegex := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
-	if !dateRegex.MatchString(args) {
-		msg := tgbotapi.NewMessage(message.Chat.ID, "Invalid date format. Please use YYYY-MM-DD format (e.g., 1999-12-31)")
-		if _, err := b.api.Send(msg); err != nil {
-			logger.Error("BOT", "Failed to send message: %v", err)
-		}
-		return
-	}
-
-	// Parse and validate the date
-	_, err := time.Parse("2006-01-02", args)
-	if err != nil {
-		msg := tgbotapi.NewMessage(message.Chat.ID, "Invalid date. Please use a valid date in YYYY-MM-DD format.")
-		if _, err := b.api.Send(msg); err != nil {
-			logger.Error("BOT", "Failed to send message: %v", err)
-		}
-		return
-	}
-
-	// Get chat name - prioritize chat title for groups, fall back to user info for private chats
+// resolveChatName determines the appropriate display name for a chat.
+// For group chats, it returns the group title. For private chats, it returns
+// the user's full name (first + last) or username. Falls back to "Unknown" if
+// no name information is available.
+func resolveChatName(message *tgbotapi.Message) string {
 	chatName := "Unknown"
 	if message.Chat.Type == "group" || message.Chat.Type == "supergroup" {
 		// For group chats, use the group name
@@ -395,6 +360,55 @@ func (b *Bot) handleUpdateBirthDateCommand(message *tgbotapi.Message, args strin
 	if chatName == "Unknown" && message.Chat.Title != "" {
 		chatName = message.Chat.Title
 	}
+
+	return chatName
+}
+
+func (b *Bot) handleUpdateBirthDateCommand(message *tgbotapi.Message, args string) {
+	if args == "" {
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Please provide a birth date. Example: /update_birth_date 1999-12-31")
+		if _, err := b.api.Send(msg); err != nil {
+			logger.Error("BOT", "Failed to send message: %v", err)
+		}
+		return
+	}
+
+	// Handle MM-DD format by converting to 0000-MM-DD (year unknown)
+	if mmddRegex.MatchString(args) {
+		// Validate the MM-DD date
+		_, err := time.Parse("01-02", args)
+		if err != nil {
+			msg := tgbotapi.NewMessage(message.Chat.ID, "Invalid date. Please use a valid MM-DD format (e.g., 12-31)")
+			if _, err := b.api.Send(msg); err != nil {
+				logger.Error("BOT", "Failed to send message: %v", err)
+			}
+			return
+		}
+		// Convert MM-DD to 0000-MM-DD format
+		args = "0000-" + args
+	}
+
+	// Validate date format (YYYY-MM-DD)
+	if !dateRegex.MatchString(args) {
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Invalid date format. Please use YYYY-MM-DD format (e.g., 1999-12-31)")
+		if _, err := b.api.Send(msg); err != nil {
+			logger.Error("BOT", "Failed to send message: %v", err)
+		}
+		return
+	}
+
+	// Parse and validate the date
+	_, err := time.Parse("2006-01-02", args)
+	if err != nil {
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Invalid date. Please use a valid date in YYYY-MM-DD format.")
+		if _, err := b.api.Send(msg); err != nil {
+			logger.Error("BOT", "Failed to send message: %v", err)
+		}
+		return
+	}
+
+	// Get chat name using helper function
+	chatName := resolveChatName(message)
 
 	// Load existing birthdays
 	birthdays, err := storage.LoadBirthdays()
@@ -581,7 +595,7 @@ func (b *Bot) checkBirthdays() {
 	}
 }
 
-func (b *Bot) shouldSendBirthdayNotification(birthday models.Birthday, notificationType string, daysDiff int) bool {
+func (b *Bot) shouldSendBirthdayNotification(birthday models.Birthday, notificationType string) bool {
 	// Always send birthday today notification
 	if notificationType == "BIRTHDAY_TODAY" {
 		// Check if last notification was today
@@ -728,7 +742,7 @@ func (b *Bot) processBirthdays() {
 		}
 
 		// Check if this notification should be sent
-		if b.shouldSendBirthdayNotification(birthday, notificationType, daysDiff) {
+		if b.shouldSendBirthdayNotification(birthday, notificationType) {
 			logger.LogNotification("INFO", "SENDING: Type=%s, Name='%s', ChatID=%d, Message='%s'",
 				notificationType, birthday.Name, birthday.ChatID, message)
 

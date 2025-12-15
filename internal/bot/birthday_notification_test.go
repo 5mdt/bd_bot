@@ -18,7 +18,7 @@ func TestBirthdayNotificationUniqueness(t *testing.T) {
 	}
 
 	// Simulate first birthday notification
-	shouldSend := bot.shouldSendBirthdayNotification(testBirthday, "BIRTHDAY_TODAY", 0)
+	shouldSend := bot.shouldSendBirthdayNotification(testBirthday, "BIRTHDAY_TODAY")
 	if !shouldSend {
 		t.Error("First birthday notification should be sent")
 	}
@@ -27,7 +27,7 @@ func TestBirthdayNotificationUniqueness(t *testing.T) {
 	testBirthday.LastNotification = time.Now()
 
 	// Simulate second birthday notification on the same day
-	shouldSend = bot.shouldSendBirthdayNotification(testBirthday, "BIRTHDAY_TODAY", 0)
+	shouldSend = bot.shouldSendBirthdayNotification(testBirthday, "BIRTHDAY_TODAY")
 	if shouldSend {
 		t.Error("Second birthday notification on the same day should not be sent")
 	}
@@ -35,7 +35,7 @@ func TestBirthdayNotificationUniqueness(t *testing.T) {
 	// Simulate birthday notification on a different day
 	futureTime := time.Now().AddDate(0, 0, 1)
 	testBirthday.LastNotification = futureTime
-	shouldSend = bot.shouldSendBirthdayNotification(testBirthday, "BIRTHDAY_TODAY", 0)
+	shouldSend = bot.shouldSendBirthdayNotification(testBirthday, "BIRTHDAY_TODAY")
 	if !shouldSend {
 		t.Error("Birthday notification should be sent on a different day")
 	}
