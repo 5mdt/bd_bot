@@ -5,6 +5,7 @@ import (
 	"5mdt/bd_bot/internal/models"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 )
 
@@ -52,10 +53,10 @@ func TestUpdateBirthdayFromForm_InvalidTimestamp(t *testing.T) {
 	b := &models.Birthday{}
 	err := updateBirthdayFromForm(b, req)
 	if err == nil {
-		t.Error("Expected error for invalid timestamp, got nil")
+		t.Fatal("Expected error for invalid timestamp, got nil")
 	}
-	if err != nil && err.Error() != "invalid last_notification format: parsing time \"invalid-timestamp\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"invalid-timestamp\" as \"2006\"" {
-		t.Logf("Got error: %v", err)
+	if !strings.Contains(err.Error(), "invalid last_notification format") {
+		t.Errorf("Expected error to contain 'invalid last_notification format', got: %v", err)
 	}
 }
 
@@ -72,10 +73,10 @@ func TestUpdateBirthdayFromForm_InvalidChatID(t *testing.T) {
 	b := &models.Birthday{}
 	err := updateBirthdayFromForm(b, req)
 	if err == nil {
-		t.Error("Expected error for invalid chat_id, got nil")
+		t.Fatal("Expected error for invalid chat_id, got nil")
 	}
-	if err != nil && err.Error() != "invalid chat_id format: strconv.ParseInt: parsing \"not-a-number\": invalid syntax" {
-		t.Logf("Got error: %v", err)
+	if !strings.Contains(err.Error(), "invalid chat_id format") {
+		t.Errorf("Expected error to contain 'invalid chat_id format', got: %v", err)
 	}
 }
 
