@@ -37,6 +37,8 @@ type Bot struct {
 	notificationStartHour int
 	// notificationEndHour is the end hour for notifications (0-23, UTC).
 	notificationEndHour int
+	// running indicates whether the bot's run loop is active.
+	running bool
 	// mu is the mutex for thread-safe access to bot state.
 	mu sync.RWMutex
 	// ctx is the context for cancellation.
@@ -107,7 +109,17 @@ func New(token string) (*Bot, error) {
 
 // Start begins the bot's message polling and birthday checking goroutines.
 // This is non-blocking; the bot runs in the background.
+// If the bot is already running, this method does nothing to prevent duplicate goroutines.
 func (b *Bot) Start() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if b.running {
+		logger.Warn("BOT", "Start() called but bot is already running, ignoring")
+		return
+	}
+
+	b.running = true
 	go b.run()
 }
 
@@ -205,6 +217,10 @@ func (b *Bot) run() {
 	for {
 		select {
 		case <-b.ctx.Done():
+			b.api.StopReceivingUpdates()
+			b.mu.Lock()
+			b.running = false
+			b.mu.Unlock()
 			b.setStatus("stopped")
 			return
 		case update := <-updates:
