@@ -14,6 +14,9 @@ var (
 	once sync.Once
 )
 
+// LoadTemplates loads and parses all HTML templates from the embedded filesystem,
+// registers custom template functions, and returns a cached template for rendering.
+// Uses sync.Once to ensure templates are loaded only once.
 func LoadTemplates() *template.Template {
 	once.Do(func() {
 		// Load template with functions for birth date handling (updated)

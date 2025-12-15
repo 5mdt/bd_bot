@@ -1,3 +1,6 @@
+// Package handlers provides HTTP request handlers for the birthday management web interface.
+// It manages rendering the birthday list, handling form submissions for add/edit/delete operations,
+// and displaying bot status information.
 package handlers
 
 import (
@@ -13,29 +16,49 @@ import (
 	"5mdt/bd_bot/internal/storage"
 )
 
+// PageData contains the data passed to page templates.
 type PageData struct {
+	// Birthdays is the list of birthday records to display.
 	Birthdays []models.Birthday
-	BotInfo   BotInfo
+	// BotInfo contains Telegram bot status and statistics.
+	BotInfo BotInfo
 }
 
+// BotInfo represents the Telegram bot's current status and configuration.
 type BotInfo struct {
-	Status              string
-	Username            string
-	FirstName           string
-	Uptime              string
-	NotificationsSent   int64
-	NotificationHours   string
-	NextCheckTime       string
+	// Status is the current bot status (e.g., "running", "stopped", "not configured").
+	Status string
+	// Username is the Telegram bot's username (without @).
+	Username string
+	// FirstName is the Telegram bot's display name.
+	FirstName string
+	// Uptime is the human-readable uptime duration.
+	Uptime string
+	// NotificationsSent is the total number of birthday notifications sent.
+	NotificationsSent int64
+	// NotificationHours is the configured notification time window (e.g., "08:00 - 20:00 UTC").
+	NotificationHours string
+	// NextCheckTime is the next scheduled birthday check time.
+	NextCheckTime string
+	// CurrentHourInWindow indicates whether the current hour falls within the notification window.
 	CurrentHourInWindow bool
-	Configured          bool
+	// Configured indicates whether the bot is properly configured with a valid token.
+	Configured bool
 }
 
+// BotStatusProvider defines the interface for querying bot status and metrics.
 type BotStatusProvider interface {
+	// GetStatus returns the current bot status.
 	GetStatus() string
+	// GetUsername returns the bot's username.
 	GetUsername() string
+	// GetFirstName returns the bot's display name.
 	GetFirstName() string
+	// GetUptime returns the duration since bot startup.
 	GetUptime() time.Duration
+	// GetNotificationsSent returns the total notifications sent.
 	GetNotificationsSent() int64
+	// GetNotificationHours returns start and end hours for notifications.
 	GetNotificationHours() (int, int)
 }
 
@@ -88,49 +111,32 @@ func parseIdx(r *http.Request) (int, error) {
 	return strconv.Atoi(r.FormValue("idx"))
 }
 
-func updateBirthdayFromForm(b *models.Birthday, r *http.Request) {
+func updateBirthdayFromForm(b *models.Birthday, r *http.Request) error {
 	originalBirthDate := b.BirthDate
 	b.Name = r.FormValue("name")
 	b.BirthDate = normalizeDateWithOriginal(r.FormValue("birth_date"), originalBirthDate)
 
 	// Parse timestamp from form
 	if timestampStr := r.FormValue("last_notification"); timestampStr != "" {
-		if timestamp, err := time.Parse(time.RFC3339, timestampStr); err == nil {
-			b.LastNotification = timestamp.UTC()
+		timestamp, err := time.Parse(time.RFC3339, timestampStr)
+		if err != nil {
+			logger.Error("HANDLERS", "Failed to parse last_notification '%s': %v", timestampStr, err)
+			return fmt.Errorf("invalid last_notification format: %w", err)
 		}
+		b.LastNotification = timestamp.UTC()
 	}
 
-	if id, err := strconv.ParseInt(r.FormValue("chat_id"), 10, 64); err == nil {
+	chatIDStr := r.FormValue("chat_id")
+	if chatIDStr != "" {
+		id, err := strconv.ParseInt(chatIDStr, 10, 64)
+		if err != nil {
+			logger.Error("HANDLERS", "Failed to parse chat_id '%s': %v", chatIDStr, err)
+			return fmt.Errorf("invalid chat_id format: %w", err)
+		}
 		b.ChatID = id
 	}
-}
 
-func normalizeDate(s string) string {
-	if s == "" {
-		return ""
-	}
-
-	// Handle "MM-DD" format - convert to "0000-MM-DD"
-	if len(s) == 5 && strings.Count(s, "-") == 1 {
-		return "0000-" + s
-	}
-
-	// Handle "YYYY-MM-DD" format
-	parsedDate, err := time.Parse("2006-01-02", s)
-	if err != nil {
-		return ""
-	}
-
-	// For current year dates, store as "0000-MM-DD" (year unknown)
-	currentYear := time.Now().Year()
-	if parsedDate.Year() == currentYear {
-		month := parsedDate.Format("01")
-		day := parsedDate.Format("02")
-		return "0000-" + month + "-" + day
-	}
-
-	// For other years, keep the full date
-	return s
+	return nil
 }
 
 func normalizeDateWithOriginal(s string, originalBirthDate string) string {
@@ -179,6 +185,7 @@ func loadBirthdaysOrError(w http.ResponseWriter) ([]models.Birthday, bool) {
 	return bs, true
 }
 
+// IndexHandler returns an HTTP handler that renders the main birthday list page with bot status.
 func IndexHandler(tpl *template.Template, botProvider BotStatusProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bs, ok := loadBirthdaysOrError(w)
@@ -219,6 +226,8 @@ func IndexHandler(tpl *template.Template, botProvider BotStatusProvider) http.Ha
 	}
 }
 
+// SaveRowHandler returns an HTTP handler that processes form submissions to add or update birthday records.
+// For idx==-1, it adds a new record; otherwise, it updates the record at the given index.
 func SaveRowHandler(tpl *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		idx, err := parseIdx(r)
@@ -235,7 +244,11 @@ func SaveRowHandler(tpl *template.Template) http.HandlerFunc {
 
 		if idx == -1 {
 			b := models.Birthday{}
-			updateBirthdayFromForm(&b, r)
+			if err := updateBirthdayFromForm(&b, r); err != nil {
+				logger.Error("HANDLERS", "updateBirthdayFromForm error: %v", err)
+				http.Error(w, "Invalid form data: "+err.Error(), 400)
+				return
+			}
 			bs = append(bs, b)
 		} else {
 			if idx < 0 || idx >= len(bs) {
@@ -243,7 +256,11 @@ func SaveRowHandler(tpl *template.Template) http.HandlerFunc {
 				http.Error(w, "Invalid idx", 400)
 				return
 			}
-			updateBirthdayFromForm(&bs[idx], r)
+			if err := updateBirthdayFromForm(&bs[idx], r); err != nil {
+				logger.Error("HANDLERS", "updateBirthdayFromForm error: %v", err)
+				http.Error(w, "Invalid form data: "+err.Error(), 400)
+				return
+			}
 		}
 
 		if err := storage.SaveBirthdays(bs); err != nil {
@@ -258,6 +275,7 @@ func SaveRowHandler(tpl *template.Template) http.HandlerFunc {
 	}
 }
 
+// DeleteRowHandler returns an HTTP handler that processes requests to delete birthday records by index.
 func DeleteRowHandler(tpl *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		idx, err := parseIdx(r)
@@ -281,6 +299,8 @@ func DeleteRowHandler(tpl *template.Template) http.HandlerFunc {
 			}
 		} else {
 			logger.Error("HANDLERS", "DeleteRowHandler invalid idx: %d", idx)
+			http.Error(w, "Invalid idx", http.StatusBadRequest)
+			return
 		}
 		if err := tpl.ExecuteTemplate(w, "table", bs); err != nil {
 			logger.Error("HANDLERS", "Template execute error: %v", err)

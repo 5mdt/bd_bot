@@ -1,3 +1,5 @@
+// Package bot provides the Telegram bot implementation for birthday notifications.
+// It handles incoming messages, commands, birthday tracking, and scheduled notifications.
 package bot
 
 import (
@@ -13,23 +15,47 @@ import (
 	"5mdt/bd_bot/internal/logger"
 	"5mdt/bd_bot/internal/models"
 	"5mdt/bd_bot/internal/storage"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+// Precompiled regex patterns for date validation
+var (
+	mmddRegex = regexp.MustCompile(`^\d{2}-\d{2}$`)
+	dateRegex = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+)
+
+// Bot represents a Telegram bot instance that manages birthday notifications.
 type Bot struct {
-	api                   *tgbotapi.BotAPI
-	status                string
-	username              string
-	firstName             string
-	startTime             time.Time
-	notificationsSent     int64
-	notificationStartHour int // Start hour for notifications (0-23, UTC)
-	notificationEndHour   int // End hour for notifications (0-23, UTC)
-	mu                    sync.RWMutex
-	ctx                   context.Context
-	cancel                context.CancelFunc
+	// api is the Telegram Bot API client.
+	api *tgbotapi.BotAPI
+	// status is the current bot status (e.g., "connecting", "running", "stopped").
+	status string
+	// username is the bot's Telegram username.
+	username string
+	// firstName is the bot's display name.
+	firstName string
+	// startTime is the bot startup timestamp.
+	startTime time.Time
+	// notificationsSent is the counter of birthday notifications sent.
+	notificationsSent int64
+	// notificationStartHour is the start hour for notifications (0-23, UTC).
+	notificationStartHour int
+	// notificationEndHour is the end hour for notifications (0-23, UTC).
+	notificationEndHour int
+	// running indicates whether the bot's run loop is active.
+	running bool
+	// mu is the mutex for thread-safe access to bot state.
+	mu sync.RWMutex
+	// ctx is the context for cancellation.
+	ctx context.Context
+	// cancel is the function to cancel the bot's context.
+	cancel context.CancelFunc
 }
 
+// New creates and initializes a new Telegram bot instance with the given token.
+// It fetches bot information from Telegram and parses notification hours from environment variables.
+// Returns an error if the token is invalid or Telegram API communication fails.
 func New(token string) (*Bot, error) {
 	if token == "" {
 		return nil, fmt.Errorf("telegram bot token is required")
@@ -87,15 +113,30 @@ func New(token string) (*Bot, error) {
 	return bot, nil
 }
 
+// Start begins the bot's message polling and birthday checking goroutines.
+// This is non-blocking; the bot runs in the background.
+// If the bot is already running, this method does nothing to prevent duplicate goroutines.
 func (b *Bot) Start() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if b.running {
+		logger.Warn("BOT", "Start() called but bot is already running, ignoring")
+		return
+	}
+
+	b.running = true
 	go b.run()
 }
 
+// Stop gracefully shuts down the bot by canceling its context and updating its status.
 func (b *Bot) Stop() {
 	b.cancel()
 	b.setStatus("stopped")
 }
 
+// GetStatus returns the current bot status (e.g., "running", "stopped", "not configured").
+// Returns "not configured" if the bot is nil.
 func (b *Bot) GetStatus() string {
 	if b == nil {
 		return "not configured"
@@ -105,6 +146,8 @@ func (b *Bot) GetStatus() string {
 	return b.status
 }
 
+// GetUsername returns the bot's Telegram username without the @ prefix.
+// Returns an empty string if the bot is nil.
 func (b *Bot) GetUsername() string {
 	if b == nil {
 		return ""
@@ -114,6 +157,8 @@ func (b *Bot) GetUsername() string {
 	return b.username
 }
 
+// GetFirstName returns the bot's display name as configured in Telegram.
+// Returns an empty string if the bot is nil.
 func (b *Bot) GetFirstName() string {
 	if b == nil {
 		return ""
@@ -123,6 +168,8 @@ func (b *Bot) GetFirstName() string {
 	return b.firstName
 }
 
+// GetUptime returns the duration since the bot started.
+// Returns 0 if the bot is nil.
 func (b *Bot) GetUptime() time.Duration {
 	if b == nil {
 		return 0
@@ -132,6 +179,8 @@ func (b *Bot) GetUptime() time.Duration {
 	return time.Since(b.startTime)
 }
 
+// GetNotificationsSent returns the total number of birthday notifications sent by the bot.
+// Returns 0 if the bot is nil.
 func (b *Bot) GetNotificationsSent() int64 {
 	if b == nil {
 		return 0
@@ -141,6 +190,8 @@ func (b *Bot) GetNotificationsSent() int64 {
 	return b.notificationsSent
 }
 
+// GetNotificationHours returns the configured start and end hours (UTC) for sending notifications.
+// Returns (0, 0) if the bot is nil.
 func (b *Bot) GetNotificationHours() (int, int) {
 	if b == nil {
 		return 0, 0
@@ -172,6 +223,10 @@ func (b *Bot) run() {
 	for {
 		select {
 		case <-b.ctx.Done():
+			b.api.StopReceivingUpdates()
+			b.mu.Lock()
+			b.running = false
+			b.mu.Unlock()
 			b.setStatus("stopped")
 			return
 		case update := <-updates:
@@ -278,52 +333,11 @@ The bot will send you birthday greetings on your special day! 🎉`
 	}
 }
 
-func (b *Bot) handleUpdateBirthDateCommand(message *tgbotapi.Message, args string) {
-	if args == "" {
-		msg := tgbotapi.NewMessage(message.Chat.ID, "Please provide a birth date. Example: /update_birth_date 1999-12-31")
-		if _, err := b.api.Send(msg); err != nil {
-			logger.Error("BOT", "Failed to send message: %v", err)
-		}
-		return
-	}
-
-	// Handle MM-DD format by converting to 0000-MM-DD (year unknown)
-	mmddRegex := regexp.MustCompile(`^\d{2}-\d{2}$`)
-	if mmddRegex.MatchString(args) {
-		// Validate the MM-DD date
-		_, err := time.Parse("01-02", args)
-		if err != nil {
-			msg := tgbotapi.NewMessage(message.Chat.ID, "Invalid date. Please use a valid MM-DD format (e.g., 12-31)")
-			if _, err := b.api.Send(msg); err != nil {
-				logger.Error("BOT", "Failed to send message: %v", err)
-			}
-			return
-		}
-		// Convert MM-DD to 0000-MM-DD format
-		args = "0000-" + args
-	}
-
-	// Validate date format (YYYY-MM-DD)
-	dateRegex := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
-	if !dateRegex.MatchString(args) {
-		msg := tgbotapi.NewMessage(message.Chat.ID, "Invalid date format. Please use YYYY-MM-DD format (e.g., 1999-12-31)")
-		if _, err := b.api.Send(msg); err != nil {
-			logger.Error("BOT", "Failed to send message: %v", err)
-		}
-		return
-	}
-
-	// Parse and validate the date
-	_, err := time.Parse("2006-01-02", args)
-	if err != nil {
-		msg := tgbotapi.NewMessage(message.Chat.ID, "Invalid date. Please use a valid date in YYYY-MM-DD format.")
-		if _, err := b.api.Send(msg); err != nil {
-			logger.Error("BOT", "Failed to send message: %v", err)
-		}
-		return
-	}
-
-	// Get chat name - prioritize chat title for groups, fall back to user info for private chats
+// resolveChatName determines the appropriate display name for a chat.
+// For group chats, it returns the group title. For private chats, it returns
+// the user's full name (first + last) or username. Falls back to "Unknown" if
+// no name information is available.
+func resolveChatName(message *tgbotapi.Message) string {
 	chatName := "Unknown"
 	if message.Chat.Type == "group" || message.Chat.Type == "supergroup" {
 		// For group chats, use the group name
@@ -346,6 +360,55 @@ func (b *Bot) handleUpdateBirthDateCommand(message *tgbotapi.Message, args strin
 	if chatName == "Unknown" && message.Chat.Title != "" {
 		chatName = message.Chat.Title
 	}
+
+	return chatName
+}
+
+func (b *Bot) handleUpdateBirthDateCommand(message *tgbotapi.Message, args string) {
+	if args == "" {
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Please provide a birth date. Example: /update_birth_date 1999-12-31")
+		if _, err := b.api.Send(msg); err != nil {
+			logger.Error("BOT", "Failed to send message: %v", err)
+		}
+		return
+	}
+
+	// Handle MM-DD format by converting to 0000-MM-DD (year unknown)
+	if mmddRegex.MatchString(args) {
+		// Validate the MM-DD date
+		_, err := time.Parse("01-02", args)
+		if err != nil {
+			msg := tgbotapi.NewMessage(message.Chat.ID, "Invalid date. Please use a valid MM-DD format (e.g., 12-31)")
+			if _, err := b.api.Send(msg); err != nil {
+				logger.Error("BOT", "Failed to send message: %v", err)
+			}
+			return
+		}
+		// Convert MM-DD to 0000-MM-DD format
+		args = "0000-" + args
+	}
+
+	// Validate date format (YYYY-MM-DD)
+	if !dateRegex.MatchString(args) {
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Invalid date format. Please use YYYY-MM-DD format (e.g., 1999-12-31)")
+		if _, err := b.api.Send(msg); err != nil {
+			logger.Error("BOT", "Failed to send message: %v", err)
+		}
+		return
+	}
+
+	// Parse and validate the date
+	_, err := time.Parse("2006-01-02", args)
+	if err != nil {
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Invalid date. Please use a valid date in YYYY-MM-DD format.")
+		if _, err := b.api.Send(msg); err != nil {
+			logger.Error("BOT", "Failed to send message: %v", err)
+		}
+		return
+	}
+
+	// Get chat name using helper function
+	chatName := resolveChatName(message)
 
 	// Load existing birthdays
 	birthdays, err := storage.LoadBirthdays()
@@ -532,7 +595,7 @@ func (b *Bot) checkBirthdays() {
 	}
 }
 
-func (b *Bot) shouldSendBirthdayNotification(birthday models.Birthday, notificationType string, daysDiff int) bool {
+func (b *Bot) shouldSendBirthdayNotification(birthday models.Birthday, notificationType string) bool {
 	// Always send birthday today notification
 	if notificationType == "BIRTHDAY_TODAY" {
 		// Check if last notification was today
@@ -633,8 +696,11 @@ func (b *Bot) processBirthdays() {
 			continue
 		}
 
-		// Calculate days difference
-		daysDiff := int(thisYearBirthday.Sub(now).Hours() / 24)
+		// Normalize current time to start of day (midnight) for accurate date comparison
+		nowDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
+		// Calculate days difference using date-only comparison
+		daysDiff := int(thisYearBirthday.Sub(nowDate).Hours() / 24)
 
 		logger.LogNotification("DEBUG", "Birthday analysis for '%s': ThisYear=%s, DaysDiff=%d",
 			birthday.Name, thisYearBirthday.Format("2006-01-02"), daysDiff)
@@ -655,7 +721,7 @@ func (b *Bot) processBirthdays() {
 		} else if daysDiff < 0 {
 			// Birthday has passed this year - check next year
 			nextYearBirthday := thisYearBirthday.AddDate(1, 0, 0)
-			nextYearDaysDiff := int(nextYearBirthday.Sub(now).Hours() / 24)
+			nextYearDaysDiff := int(nextYearBirthday.Sub(nowDate).Hours() / 24)
 
 			logger.LogNotification("DEBUG", "Birthday passed this year for '%s': NextYear=%s, NextYearDaysDiff=%d",
 				birthday.Name, nextYearBirthday.Format("2006-01-02"), nextYearDaysDiff)
@@ -676,7 +742,7 @@ func (b *Bot) processBirthdays() {
 		}
 
 		// Check if this notification should be sent
-		if b.shouldSendBirthdayNotification(birthday, notificationType, daysDiff) {
+		if b.shouldSendBirthdayNotification(birthday, notificationType) {
 			logger.LogNotification("INFO", "SENDING: Type=%s, Name='%s', ChatID=%d, Message='%s'",
 				notificationType, birthday.Name, birthday.ChatID, message)
 
@@ -705,7 +771,7 @@ func (b *Bot) processBirthdays() {
 			if daysDiff < 0 {
 				// Birthday has passed, show next year info
 				nextYearBirthday := thisYearBirthday.AddDate(1, 0, 0)
-				nextYearDaysDiff := int(nextYearBirthday.Sub(now).Hours() / 24)
+				nextYearDaysDiff := int(nextYearBirthday.Sub(nowDate).Hours() / 24)
 				logger.LogNotification("DEBUG", "NO_MATCH: Birthday '%s' (%s) passed this year (%d days ago), next occurrence in %d days",
 					birthday.Name, birthdayMMDD, -daysDiff, nextYearDaysDiff)
 			} else {

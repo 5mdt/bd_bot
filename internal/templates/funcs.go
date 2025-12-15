@@ -1,3 +1,4 @@
+// Package templates provides template rendering and helper functions for the web interface.
 package templates
 
 import (
@@ -7,6 +8,13 @@ import (
 	"time"
 )
 
+// nowYear returns the current year and can be overridden in tests for deterministic behavior.
+var nowYear = func() int {
+	return time.Now().Year()
+}
+
+// dict creates a map from alternating key-value arguments for use in templates.
+// It validates that an even number of arguments are provided and all keys are strings.
 func dict(v ...interface{}) (map[string]interface{}, error) {
 	if len(v)%2 != 0 {
 		return nil, errors.New("dict requires even number of arguments")
@@ -22,7 +30,8 @@ func dict(v ...interface{}) (map[string]interface{}, error) {
 	return m, nil
 }
 
-// formatTime formats a time.Time as an ISO string for JavaScript consumption
+// formatTime returns a time.Time as an RFC3339 string for JavaScript consumption,
+// or an empty string if the time is zero.
 func formatTime(t time.Time) string {
 	if t.IsZero() {
 		return ""
@@ -30,14 +39,13 @@ func formatTime(t time.Time) string {
 	return t.UTC().Format(time.RFC3339)
 }
 
-// isZeroTime checks if a time.Time is zero
+// isZeroTime returns true if the given time.Time value is zero (unset).
 func isZeroTime(t time.Time) bool {
 	return t.IsZero()
 }
 
-// formatBirthDate formats birth date for display
-// If year is 0000 (unknown), show only MM-DD
-// Otherwise show the full YYYY-MM-DD
+// formatBirthDate formats a birth date string for display in the UI.
+// If the year is 0000 (unknown), it returns only MM-DD; otherwise, it returns the full YYYY-MM-DD.
 func formatBirthDate(birthDate string) string {
 	if strings.HasPrefix(birthDate, "0000-") {
 		// Return MM-DD for unknown year
@@ -46,19 +54,23 @@ func formatBirthDate(birthDate string) string {
 	return birthDate
 }
 
-// formatBirthDateForInput formats birth date for HTML date input
-// If year is 0000 (unknown), substitute current year so browser can display it
-// Otherwise return the full date for the input
+// formatBirthDateForInput formats a birth date string for HTML date input elements.
+// If the year is 0000 (unknown), it substitutes a suitable year for browser display.
+// For Feb 29 (leap day), it uses 2000 to avoid invalid dates in non-leap years.
 func formatBirthDateForInput(birthDate string) string {
 	if strings.HasPrefix(birthDate, "0000-") {
+		// For leap day (Feb 29), use a fixed leap year to avoid invalid dates
+		if strings.HasPrefix(birthDate, "0000-02-29") {
+			return strings.Replace(birthDate, "0000", "2000", 1)
+		}
 		// Replace 0000 with current year for browser display
-		currentYear := time.Now().Year()
+		currentYear := nowYear()
 		return strings.Replace(birthDate, "0000", fmt.Sprintf("%d", currentYear), 1)
 	}
 	return birthDate
 }
 
-// isUnknownYear checks if a birth date has an unknown year (0000)
+// isUnknownYear returns true if the birth date has an unknown year (starts with "0000-").
 func isUnknownYear(birthDate string) bool {
 	return strings.HasPrefix(birthDate, "0000-")
 }

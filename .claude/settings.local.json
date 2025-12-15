@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(go list:*)",
+      "Bash(go tool cover:*)"
+    ]
+  }
+}

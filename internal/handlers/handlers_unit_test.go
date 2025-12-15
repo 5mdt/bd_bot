@@ -5,33 +5,9 @@ import (
 	"5mdt/bd_bot/internal/models"
 	"net/http"
 	"net/url"
-	"strconv"
+	"strings"
 	"testing"
-	"time"
 )
-
-func TestNormalizeDate(t *testing.T) {
-	currentYear := time.Now().Year()
-	currentYearStr := strconv.Itoa(currentYear)
-
-	tests := []struct {
-		in, want string
-	}{
-		{"12-31", "0000-12-31"},
-		{"2000-01-01", "2000-01-01"},
-		{currentYearStr + "-03-15", "0000-03-15"}, // Current year should become year-unknown
-		{"1990-07-20", "1990-07-20"},              // Past year should stay as-is
-		{"invalid", ""},
-		{"12345", ""},
-		{"", ""},
-	}
-	for _, tt := range tests {
-		got := normalizeDate(tt.in)
-		if got != tt.want {
-			t.Errorf("normalizeDate(%q) = %q; want %q", tt.in, got, tt.want)
-		}
-	}
-}
 
 func TestUpdateBirthdayFromForm(t *testing.T) {
 	form := url.Values{
@@ -44,7 +20,10 @@ func TestUpdateBirthdayFromForm(t *testing.T) {
 	req.Form = form
 
 	b := &models.Birthday{}
-	updateBirthdayFromForm(b, req)
+	err := updateBirthdayFromForm(b, req)
+	if err != nil {
+		t.Fatalf("updateBirthdayFromForm returned unexpected error: %v", err)
+	}
 
 	if b.Name != "Alice" {
 		t.Errorf("Name = %q; want Alice", b.Name)
@@ -58,5 +37,75 @@ func TestUpdateBirthdayFromForm(t *testing.T) {
 	}
 	if b.ChatID != 123 {
 		t.Errorf("ChatID = %d; want 123", b.ChatID)
+	}
+}
+
+func TestUpdateBirthdayFromForm_InvalidTimestamp(t *testing.T) {
+	form := url.Values{
+		"name":              {"Alice"},
+		"birth_date":        {"12-31"},
+		"last_notification": {"invalid-timestamp"},
+		"chat_id":           {"123"},
+	}
+	req, _ := http.NewRequest("POST", "/", nil)
+	req.Form = form
+
+	b := &models.Birthday{}
+	err := updateBirthdayFromForm(b, req)
+	if err == nil {
+		t.Fatal("Expected error for invalid timestamp, got nil")
+	}
+	if !strings.Contains(err.Error(), "invalid last_notification format") {
+		t.Errorf("Expected error to contain 'invalid last_notification format', got: %v", err)
+	}
+}
+
+func TestUpdateBirthdayFromForm_InvalidChatID(t *testing.T) {
+	form := url.Values{
+		"name":              {"Alice"},
+		"birth_date":        {"12-31"},
+		"last_notification": {"2024-01-01T15:30:00Z"},
+		"chat_id":           {"not-a-number"},
+	}
+	req, _ := http.NewRequest("POST", "/", nil)
+	req.Form = form
+
+	b := &models.Birthday{}
+	err := updateBirthdayFromForm(b, req)
+	if err == nil {
+		t.Fatal("Expected error for invalid chat_id, got nil")
+	}
+	if !strings.Contains(err.Error(), "invalid chat_id format") {
+		t.Errorf("Expected error to contain 'invalid chat_id format', got: %v", err)
+	}
+}
+
+func TestUpdateBirthdayFromForm_EmptyOptionalFields(t *testing.T) {
+	form := url.Values{
+		"name":              {"Alice"},
+		"birth_date":        {"12-31"},
+		"last_notification": {""},
+		"chat_id":           {""},
+	}
+	req, _ := http.NewRequest("POST", "/", nil)
+	req.Form = form
+
+	b := &models.Birthday{}
+	err := updateBirthdayFromForm(b, req)
+	if err != nil {
+		t.Fatalf("updateBirthdayFromForm returned unexpected error for empty optional fields: %v", err)
+	}
+
+	if b.Name != "Alice" {
+		t.Errorf("Name = %q; want Alice", b.Name)
+	}
+	if b.BirthDate != "0000-12-31" {
+		t.Errorf("BirthDate = %q; want 0000-12-31", b.BirthDate)
+	}
+	if !b.LastNotification.IsZero() {
+		t.Errorf("LastNotification should be zero for empty input, got %v", b.LastNotification)
+	}
+	if b.ChatID != 0 {
+		t.Errorf("ChatID should be 0 for empty input, got %d", b.ChatID)
 	}
 }

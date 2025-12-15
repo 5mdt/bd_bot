@@ -1,3 +1,5 @@
+// Package main is the entry point for the birthday notification bot web application.
+// It initializes the Telegram bot and HTTP server for the web UI.
 package main
 
 import (
@@ -37,6 +39,9 @@ func main() {
 	}
 }
 
+// initBot creates and starts the Telegram bot from the TELEGRAM_BOT_TOKEN environment variable.
+// It logs a warning if the token is not set and returns nil without error.
+// Returns an error if bot creation or startup fails.
 func initBot() (*bot.Bot, error) {
 	token := os.Getenv("TELEGRAM_BOT_TOKEN")
 	if token == "" {
