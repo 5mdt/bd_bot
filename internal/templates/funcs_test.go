@@ -37,6 +37,36 @@ func TestFormatBirthDateForInput(t *testing.T) {
 			input:    "2020-02-29",
 			expected: "2020-02-29",
 		},
+		{
+			name:     "Unknown year boundary start (Jan 1)",
+			input:    "0000-01-01",
+			expected: "2025-01-01",
+		},
+		{
+			name:     "Unknown year boundary end (Dec 31)",
+			input:    "0000-12-31",
+			expected: "2025-12-31",
+		},
+		{
+			name:     "Empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "Invalid format",
+			input:    "invalid",
+			expected: "invalid",
+		},
+		{
+			name:     "Invalid month (13)",
+			input:    "2025-13-01",
+			expected: "2025-13-01",
+		},
+		{
+			name:     "Invalid day (Feb 30)",
+			input:    "2025-02-30",
+			expected: "2025-02-30",
+		},
 	}
 
 	for _, tt := range tests {
@@ -70,6 +100,36 @@ func TestFormatBirthDate(t *testing.T) {
 			input:    "1990-12-25",
 			expected: "1990-12-25",
 		},
+		{
+			name:     "Unknown year boundary start (Jan 1)",
+			input:    "0000-01-01",
+			expected: "01-01",
+		},
+		{
+			name:     "Unknown year boundary end (Dec 31)",
+			input:    "0000-12-31",
+			expected: "12-31",
+		},
+		{
+			name:     "Empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "Invalid format",
+			input:    "invalid",
+			expected: "invalid",
+		},
+		{
+			name:     "Invalid month (13)",
+			input:    "2025-13-01",
+			expected: "2025-13-01",
+		},
+		{
+			name:     "Invalid day (Feb 30)",
+			input:    "2025-02-30",
+			expected: "2025-02-30",
+		},
 	}
 
 	for _, tt := range tests {
@@ -102,6 +162,31 @@ func TestIsUnknownYear(t *testing.T) {
 			name:     "Known year",
 			input:    "1990-12-25",
 			expected: false,
+		},
+		{
+			name:     "Unknown year boundary start (Jan 1)",
+			input:    "0000-01-01",
+			expected: true,
+		},
+		{
+			name:     "Unknown year boundary end (Dec 31)",
+			input:    "0000-12-31",
+			expected: true,
+		},
+		{
+			name:     "Empty string",
+			input:    "",
+			expected: false,
+		},
+		{
+			name:     "Invalid format",
+			input:    "invalid",
+			expected: false,
+		},
+		{
+			name:     "Invalid date with 0000 prefix",
+			input:    "0000-13-01",
+			expected: true,
 		},
 	}
 
