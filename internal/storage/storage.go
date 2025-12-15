@@ -1,3 +1,5 @@
+// Package storage provides YAML-based persistence for birthday data.
+// It manages loading and saving birthday records from/to a configurable file path.
 package storage
 
 import (
@@ -16,6 +18,8 @@ func getPath() string {
 	return "/data/birthdays.yaml"
 }
 
+// LoadBirthdays reads and parses birthday data from the configured YAML file.
+// It creates an empty file if it doesn't exist. Returns an empty slice and error on failure.
 func LoadBirthdays() ([]models.Birthday, error) {
 	filePath := getPath()
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
@@ -31,6 +35,7 @@ func LoadBirthdays() ([]models.Birthday, error) {
 	return bs, yaml.Unmarshal(data, &bs)
 }
 
+// SaveBirthdays marshals birthday data to YAML and writes it to the configured file path.
 func SaveBirthdays(bs []models.Birthday) error {
 	filePath := getPath()
 	data, err := yaml.Marshal(bs)

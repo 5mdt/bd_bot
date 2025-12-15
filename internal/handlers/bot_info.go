@@ -7,6 +7,8 @@ import (
 	"5mdt/bd_bot/internal/logger"
 )
 
+// BotInfoHandler returns an HTTP handler that renders the bot status information as partial HTML.
+// It queries the bot provider for current status, uptime, and notification metrics.
 func BotInfoHandler(tpl *template.Template, botProvider BotStatusProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")

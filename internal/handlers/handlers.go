@@ -1,3 +1,6 @@
+// Package handlers provides HTTP request handlers for the birthday management web interface.
+// It manages rendering the birthday list, handling form submissions for add/edit/delete operations,
+// and displaying bot status information.
 package handlers
 
 import (
@@ -13,29 +16,49 @@ import (
 	"5mdt/bd_bot/internal/storage"
 )
 
+// PageData contains the data passed to page templates.
 type PageData struct {
+	// Birthdays is the list of birthday records to display.
 	Birthdays []models.Birthday
-	BotInfo   BotInfo
+	// BotInfo contains Telegram bot status and statistics.
+	BotInfo BotInfo
 }
 
+// BotInfo represents the Telegram bot's current status and configuration.
 type BotInfo struct {
-	Status              string
-	Username            string
-	FirstName           string
-	Uptime              string
-	NotificationsSent   int64
-	NotificationHours   string
-	NextCheckTime       string
+	// Status is the current bot status (e.g., "running", "stopped", "not configured").
+	Status string
+	// Username is the Telegram bot's username (without @).
+	Username string
+	// FirstName is the Telegram bot's display name.
+	FirstName string
+	// Uptime is the human-readable uptime duration.
+	Uptime string
+	// NotificationsSent is the total number of birthday notifications sent.
+	NotificationsSent int64
+	// NotificationHours is the configured notification time window (e.g., "08:00 - 20:00 UTC").
+	NotificationHours string
+	// NextCheckTime is the next scheduled birthday check time.
+	NextCheckTime string
+	// CurrentHourInWindow indicates whether the current hour falls within the notification window.
 	CurrentHourInWindow bool
-	Configured          bool
+	// Configured indicates whether the bot is properly configured with a valid token.
+	Configured bool
 }
 
+// BotStatusProvider defines the interface for querying bot status and metrics.
 type BotStatusProvider interface {
+	// GetStatus returns the current bot status.
 	GetStatus() string
+	// GetUsername returns the bot's username.
 	GetUsername() string
+	// GetFirstName returns the bot's display name.
 	GetFirstName() string
+	// GetUptime returns the duration since bot startup.
 	GetUptime() time.Duration
+	// GetNotificationsSent returns the total notifications sent.
 	GetNotificationsSent() int64
+	// GetNotificationHours returns start and end hours for notifications.
 	GetNotificationHours() (int, int)
 }
 
@@ -179,6 +202,7 @@ func loadBirthdaysOrError(w http.ResponseWriter) ([]models.Birthday, bool) {
 	return bs, true
 }
 
+// IndexHandler returns an HTTP handler that renders the main birthday list page with bot status.
 func IndexHandler(tpl *template.Template, botProvider BotStatusProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bs, ok := loadBirthdaysOrError(w)
@@ -219,6 +243,8 @@ func IndexHandler(tpl *template.Template, botProvider BotStatusProvider) http.Ha
 	}
 }
 
+// SaveRowHandler returns an HTTP handler that processes form submissions to add or update birthday records.
+// For idx==-1, it adds a new record; otherwise, it updates the record at the given index.
 func SaveRowHandler(tpl *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		idx, err := parseIdx(r)
@@ -258,6 +284,7 @@ func SaveRowHandler(tpl *template.Template) http.HandlerFunc {
 	}
 }
 
+// DeleteRowHandler returns an HTTP handler that processes requests to delete birthday records by index.
 func DeleteRowHandler(tpl *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		idx, err := parseIdx(r)

@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -108,11 +107,7 @@ func TestBirthdayDateCalculationAtDifferentTimes(t *testing.T) {
 			// Parse the birthday MM-DD using the test case's year
 			thisYearBirthday, err := time.Parse("2006-01-02", tc.currentTime.Format("2006")+"-"+tc.birthdayMMDD)
 			if err != nil {
-				// Fallback: try parsing with explicit year from test case
-				thisYearBirthday, err = time.Parse("2006-01-02", fmt.Sprintf("%d-%s", tc.currentTime.Year(), tc.birthdayMMDD))
-				if err != nil {
-					t.Fatalf("Failed to parse birthday date: %v", err)
-				}
+				t.Fatalf("Failed to parse birthday date: %v", err)
 			}
 
 			// Normalize current time to start of day (midnight) - this is the fix
@@ -143,21 +138,13 @@ func TestBirthdayDateCalculationBugReproduction(t *testing.T) {
 	birthdayMMDD := "12-16"                                       // Birthday is Dec 16
 
 	// Parse the birthday for this year
-	thisYearBirthday, err := time.Parse("2006-01-02", "2025-"+birthdayMMDD)
+	thisYearBirthday, err := time.Parse("2006-01-02", currentTime.Format("2006")+"-"+birthdayMMDD)
 	if err != nil {
 		t.Fatalf("Failed to parse birthday date: %v", err)
 	}
 
-	// OLD BUGGY CODE (would calculate 0 days):
-	// daysDiffBuggy := int(thisYearBirthday.Sub(currentTime).Hours() / 24)
-	// This gives: (2025-12-16 00:00:00 - 2025-12-15 20:00:00) = 4 hours
-	// 4 hours / 24 = 0.166... → int(0.166) = 0 ❌ WRONG!
-
-	// NEW FIXED CODE (should calculate 1 day):
 	nowDate := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 0, 0, 0, 0, time.UTC)
 	daysDiffFixed := int(thisYearBirthday.Sub(nowDate).Hours() / 24)
-	// This gives: (2025-12-16 00:00:00 - 2025-12-15 00:00:00) = 24 hours
-	// 24 hours / 24 = 1 ✓ CORRECT!
 
 	if daysDiffFixed != 1 {
 		t.Errorf("Bug still exists! Expected 1 day difference, got %d", daysDiffFixed)

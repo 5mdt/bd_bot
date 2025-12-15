@@ -1,3 +1,5 @@
+// Package bot provides the Telegram bot implementation for birthday notifications.
+// It handles incoming messages, commands, birthday tracking, and scheduled notifications.
 package bot
 
 import (
@@ -17,20 +19,35 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+// Bot represents a Telegram bot instance that manages birthday notifications.
 type Bot struct {
-	api                   *tgbotapi.BotAPI
-	status                string
-	username              string
-	firstName             string
-	startTime             time.Time
-	notificationsSent     int64
-	notificationStartHour int // Start hour for notifications (0-23, UTC)
-	notificationEndHour   int // End hour for notifications (0-23, UTC)
-	mu                    sync.RWMutex
-	ctx                   context.Context
-	cancel                context.CancelFunc
+	// api is the Telegram Bot API client.
+	api *tgbotapi.BotAPI
+	// status is the current bot status (e.g., "connecting", "running", "stopped").
+	status string
+	// username is the bot's Telegram username.
+	username string
+	// firstName is the bot's display name.
+	firstName string
+	// startTime is the bot startup timestamp.
+	startTime time.Time
+	// notificationsSent is the counter of birthday notifications sent.
+	notificationsSent int64
+	// notificationStartHour is the start hour for notifications (0-23, UTC).
+	notificationStartHour int
+	// notificationEndHour is the end hour for notifications (0-23, UTC).
+	notificationEndHour int
+	// mu is the mutex for thread-safe access to bot state.
+	mu sync.RWMutex
+	// ctx is the context for cancellation.
+	ctx context.Context
+	// cancel is the function to cancel the bot's context.
+	cancel context.CancelFunc
 }
 
+// New creates and initializes a new Telegram bot instance with the given token.
+// It fetches bot information from Telegram and parses notification hours from environment variables.
+// Returns an error if the token is invalid or Telegram API communication fails.
 func New(token string) (*Bot, error) {
 	if token == "" {
 		return nil, fmt.Errorf("telegram bot token is required")
@@ -88,15 +105,20 @@ func New(token string) (*Bot, error) {
 	return bot, nil
 }
 
+// Start begins the bot's message polling and birthday checking goroutines.
+// This is non-blocking; the bot runs in the background.
 func (b *Bot) Start() {
 	go b.run()
 }
 
+// Stop gracefully shuts down the bot by canceling its context and updating its status.
 func (b *Bot) Stop() {
 	b.cancel()
 	b.setStatus("stopped")
 }
 
+// GetStatus returns the current bot status (e.g., "running", "stopped", "not configured").
+// Returns "not configured" if the bot is nil.
 func (b *Bot) GetStatus() string {
 	if b == nil {
 		return "not configured"
@@ -106,6 +128,8 @@ func (b *Bot) GetStatus() string {
 	return b.status
 }
 
+// GetUsername returns the bot's Telegram username without the @ prefix.
+// Returns an empty string if the bot is nil.
 func (b *Bot) GetUsername() string {
 	if b == nil {
 		return ""
@@ -115,6 +139,8 @@ func (b *Bot) GetUsername() string {
 	return b.username
 }
 
+// GetFirstName returns the bot's display name as configured in Telegram.
+// Returns an empty string if the bot is nil.
 func (b *Bot) GetFirstName() string {
 	if b == nil {
 		return ""
@@ -124,6 +150,8 @@ func (b *Bot) GetFirstName() string {
 	return b.firstName
 }
 
+// GetUptime returns the duration since the bot started.
+// Returns 0 if the bot is nil.
 func (b *Bot) GetUptime() time.Duration {
 	if b == nil {
 		return 0
@@ -133,6 +161,8 @@ func (b *Bot) GetUptime() time.Duration {
 	return time.Since(b.startTime)
 }
 
+// GetNotificationsSent returns the total number of birthday notifications sent by the bot.
+// Returns 0 if the bot is nil.
 func (b *Bot) GetNotificationsSent() int64 {
 	if b == nil {
 		return 0
@@ -142,6 +172,8 @@ func (b *Bot) GetNotificationsSent() int64 {
 	return b.notificationsSent
 }
 
+// GetNotificationHours returns the configured start and end hours (UTC) for sending notifications.
+// Returns (0, 0) if the bot is nil.
 func (b *Bot) GetNotificationHours() (int, int) {
 	if b == nil {
 		return 0, 0
