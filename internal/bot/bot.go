@@ -633,8 +633,11 @@ func (b *Bot) processBirthdays() {
 			continue
 		}
 
-		// Calculate days difference
-		daysDiff := int(thisYearBirthday.Sub(now).Hours() / 24)
+		// Normalize current time to start of day (midnight) for accurate date comparison
+		nowDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
+		// Calculate days difference using date-only comparison
+		daysDiff := int(thisYearBirthday.Sub(nowDate).Hours() / 24)
 
 		logger.LogNotification("DEBUG", "Birthday analysis for '%s': ThisYear=%s, DaysDiff=%d",
 			birthday.Name, thisYearBirthday.Format("2006-01-02"), daysDiff)
